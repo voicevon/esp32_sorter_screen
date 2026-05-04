@@ -10,9 +10,8 @@
  * @brief 整合上下文体
  */
 struct SystemContext {
-    ProductionParams   config;
-    WSProductionState  prog;
-    UISnapshot       ui;
+    SystemState    prog;
+    UISnapshot     ui;
 };
 
 #endif // SYSTEM_CONTEXT_H

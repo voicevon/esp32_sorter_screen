@@ -9,6 +9,7 @@
 #include "system/SystemTypes.h"
 #include "apps/IApp.h"
 #include "ui/UIManager.h"
+#include "drivers/CommRS485.h"
 
 /**
  * @class SystemKernel
@@ -53,8 +54,8 @@ private:
     // App 管理
     std::vector<IApp*>    _apps;
     IApp*                 _currentApp = nullptr;
-    OperationMode         _currentMode = MODE_IDLE;
-    OperationMode         _pendingMode = MODE_IDLE;
+    OperationMode         _currentMode = MODE_PRODUCTION;
+    OperationMode         _pendingMode = MODE_PRODUCTION;
 
     // 任务同步
     SemaphoreHandle_t     _mutexCtx;
@@ -62,6 +63,8 @@ private:
     void uiLoop();
     static void controlTaskEntry(void* self);
     static void uiTaskEntry(void* self);
+
+    CommRS485 _comm;
 
     // 辅助
     bool canSwitchMode() const;

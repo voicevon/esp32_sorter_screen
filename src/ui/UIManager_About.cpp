@@ -59,7 +59,7 @@ void UIManager::buildAboutView(lv_obj_t* parent) {
 
     // 主标题：从上方落入
     lv_obj_t* title = lv_label_create(parent);
-    lv_label_set_text(title, "冯氏卢笋组合秤");
+    lv_label_set_text(title, "冯氏芦笋分拣机");
     lv_obj_set_style_text_font(title, &ui_font_chs_16, 0);
     lv_obj_set_style_text_color(title, lv_color_white(), 0);
     lv_obj_set_style_text_letter_space(title, 4, 0);

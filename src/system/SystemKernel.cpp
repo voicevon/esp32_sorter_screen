@@ -21,6 +21,8 @@ void SystemKernel::begin(OperationMode initialMode) {
     _ctx->ui.curMode = initialMode;
     xSemaphoreGive(_mutexCtx);
 
+    _comm.begin(_ctx);
+
     // 启动 FreeRTOS 任务
     xTaskCreatePinnedToCore(controlTaskEntry, "ControlTask", 8192, this, 10, NULL, 1);
     xTaskCreatePinnedToCore(uiTaskEntry,      "UITask",      8192, this,  5, NULL, 0);
@@ -33,7 +35,9 @@ void SystemKernel::begin(OperationMode initialMode) {
 // ICommandBus 实现 (路由到具体 App)
 // =============================================================================
 
-void SystemKernel::cmdGlobalTare() {}
+void SystemKernel::cmdGlobalTare() {
+    _comm.pushEvent("tare");
+}
 void SystemKernel::cmdGlobalServo(bool open) {}
 void SystemKernel::cmdStartScan() {}
 void SystemKernel::cmdCancelScan() {}
@@ -113,6 +117,9 @@ void SystemKernel::controlLoop() {
                 updateOperationMode(MODE_PRODUCTION);
             }
         }
+        
+        _comm.loop();
+        
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
@@ -133,18 +140,6 @@ void SystemKernel::uiLoop() {
         // 总是保持实时数据的脏标记
         _ctx->ui.dirtyFlags |= DF_LIVE_DATA; 
 
-        if (_currentApp) {
-            bool tareActive = _currentApp->hasUIProgress();
-            if (tareActive != _ctx->ui.isTareRunning) {
-                _ctx->ui.isTareRunning = tareActive;
-                _ctx->ui.dirtyFlags |= DF_PROGRESS;
-            }
-            _ctx->ui.tareProgress = _currentApp->getUIProgress();
-        }
-
-        _ctx->ui.lastCalcSuccess = _ctx->prog.lastCalcSuccess;
-        memcpy(_ctx->ui.lastBatchWeights, _ctx->prog.lastBatchWeights, sizeof(_ctx->ui.lastBatchWeights));
-
         xSemaphoreGive(_mutexCtx);
 
         // UI 渲染 (传入带脏标记的上下文)
@@ -152,24 +147,17 @@ void SystemKernel::uiLoop() {
         
         _ctx->ui.dirtyFlags = DF_NONE;
 
-        lv_tick_inc(33);
+        lv_tick_inc(UI_REFRESH_INTERVAL_MS);
         lv_timer_handler();
-        vTaskDelay(pdMS_TO_TICKS(33));
+        vTaskDelay(pdMS_TO_TICKS(UI_REFRESH_INTERVAL_MS));
     }
 }
 
 const char* SystemKernel::modeToStr(OperationMode m) {
     switch (m) {
-        case MODE_IDLE:            return "IDLE";
         case MODE_PRODUCTION:      return "PRODUCTION";
-        case MODE_DIAG_SCAN:       return "DIAG_SCAN";
-        case MODE_DIAG_DETAIL:     return "DIAG_DETAIL";
         case MODE_CONFIGURATION:   return "CONFIGURATION";
-        case MODE_SERVO_TEST:      return "SERVO_TEST";
-        case MODE_BELT_DIAG:       return "BELT_DIAG";
-        case MODE_MODBUS_DIAG:     return "MODBUS_DIAG";
         case MODE_ABOUT:           return "ABOUT";
-        case MODE_SHIFT_MANAGEMENT: return "SHIFT_MGMT";
         default:                   return "UNKNOWN";
     }
 }
