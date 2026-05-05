@@ -19,7 +19,6 @@ static void tab_change_event_cb(lv_event_t * e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     
     if (ui && ui->getBus()) {
-        Serial.printf("[UI] Tab Change Event! Target Tab: %d\n", tab_id);
         if (tab_id == 0) {
             ui->getBus()->updateOperationMode(MODE_PRODUCTION);
         } else if (tab_id == 1) {
@@ -64,8 +63,6 @@ void UIManager::init() {
     buildConfigView(config_tab);
     buildDiagView(diag_tab);
     buildAboutView(about_tab);
-
-    Serial.println("[UI] Multi-tab UI initialized with Diag support.");
 }
 
 void UIManager::updateDashboard(const SystemContext* ctx) {

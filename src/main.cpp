@@ -22,12 +22,9 @@ UIManager          ui;
 SystemKernel      kernel(&sysCtx, &ui);
 
 void setup() {
-    // 为解决 ESP32-S3 重启后串口连接丢失问题，先行等待 10 秒
-    delay(10000); 
-
     Serial.begin(115200);
     delay(500); 
-    Serial.println("\n[SYSTEM] Starting ESP32 Sorter Screen after 10s delay...");
+    Serial.println("\n[SYSTEM] Starting ESP32 Sorter Screen...");
 
     if (hw.begin()) {
         hw.lvglInit();

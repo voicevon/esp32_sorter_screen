@@ -81,12 +81,6 @@ void SystemKernel::runUILoop() {
         lv_tick_inc(20); 
         lv_timer_handler();
 
-        if (millis() - lastHb > 2000) {
-            Serial.printf("[KERNEL] UI Heartbeat - Mode:%d flags:0x%X\n", 
-                          _ctx->ui.curMode, _ctx->ui.dirtyFlags);
-            lastHb = millis();
-        }
-
         _ui->updateDashboard(_ctx);
         _ctx->ui.dirtyFlags = DF_NONE;
 

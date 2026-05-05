@@ -150,30 +150,16 @@ void TouchScreen::disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_colo
 }
 
 void TouchScreen::touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
-    static uint32_t call_cnt = 0;
-    if (call_cnt++ % 150 == 0) {
-        Serial.printf("[Touch] read_cb active (Core %d)...\n", xPortGetCoreID());
-    }
-
     // Read status
     Wire.beginTransmission(current_touch_addr);
     Wire.write(0x81); Wire.write(0x4E);
     uint8_t err = Wire.endTransmission();
-    if (err != 0) {
-        if (call_cnt % 150 == 1) { // Don't spam, but log occasionally
-            Serial.printf("[Touch] I2C ERR: %d\n", err);
-        }
-        return;
-    }
+    if (err != 0) return;
     
     Wire.requestFrom(current_touch_addr, (uint8_t)1);
     uint8_t touch_status = Wire.read();
     bool is_ready = (touch_status & 0x80);
     uint8_t points = (touch_status & 0x0F);
-
-    if (points > 0) {
-        Serial.printf("[Touch] HW Status: 0x%02X, points: %d\n", touch_status, points);
-    }
 
     static lv_indev_state_t last_state = LV_INDEV_STATE_REL;
 
@@ -190,10 +176,9 @@ void TouchScreen::touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *d
         data->state = LV_INDEV_STATE_PR;
         
         if (last_state == LV_INDEV_STATE_REL) {
-            Serial.printf("[Touch] START at (%d, %d)\n", data->point.x, data->point.y);
+            // Touch START
         } else {
-            // Optional: log movement if needed, but keeping it quiet for now
-            // Serial.printf("[Touch] MOVE to (%d, %d)\n", data->point.x, data->point.y);
+            // Optional: log movement
         }
         last_state = LV_INDEV_STATE_PR;
 
@@ -205,7 +190,7 @@ void TouchScreen::touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *d
     } else {
         data->state = LV_INDEV_STATE_REL;
         if (last_state == LV_INDEV_STATE_PR) {
-            Serial.println("[Touch] END (Released)");
+            // Touch END
         }
         last_state = LV_INDEV_STATE_REL;
 
