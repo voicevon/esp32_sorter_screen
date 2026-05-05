@@ -29,6 +29,7 @@ public:
     // 模式控制
     void updateOperationMode(OperationMode newMode) override;
     void updateAdminPage(uint8_t pageId) override;
+    void onOutletEdit(uint8_t index, uint8_t action) override;
 
 private:
     // 资源

@@ -129,6 +129,86 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
         lv_label_set_text(admin_comm_hex_label, fullHex.c_str());
         lv_label_set_text(admin_comm_ascii_label, fullAscii.c_str());
     }
+    
+    // 5. Admin Encoder Data
+    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 0) {
+        if (label_admin_encoder_raw) {
+            lv_label_set_text_fmt(label_admin_encoder_raw, "原始值 (Raw): %d", ctx->ui.admin_encoder_raw);
+        }
+        if (label_admin_encoder_corrected) {
+            lv_label_set_text_fmt(label_admin_encoder_corrected, "修正值 (Corrected): %d", ctx->ui.admin_encoder_corrected);
+        }
+        if (label_admin_encoder_logic) {
+            lv_label_set_text_fmt(label_admin_encoder_logic, "逻辑值 (Logic): %d", ctx->ui.admin_encoder_logic);
+        }
+        if (label_admin_encoder_zero_count) {
+            lv_label_set_text_fmt(label_admin_encoder_zero_count, "经历 Z 信号次数: %d", ctx->ui.admin_encoder_zero_count);
+        }
+        if (label_admin_encoder_zero_stats) {
+            lv_label_set_text_fmt(label_admin_encoder_zero_stats, "Zero 统计 (正确/总计): %d / %d", 
+                                  ctx->ui.admin_encoder_zero_correct, ctx->ui.admin_encoder_zero_total);
+        }
+    }
+
+    // 6. Admin Laser Data (Tab Index 1)
+    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 1) {
+        // 更新 LED 指示灯 (位掩码)
+        for (int i = 0; i < NUM_SCAN_POINTS; i++) {
+            if (admin_laser_leds[i]) {
+                bool isOn = (ctx->ui.admin_laser_states >> i) & 0x01;
+                if (isOn) {
+                    lv_led_set_color(admin_laser_leds[i], lv_color_hex(0xF43F5E)); // 红: 遮挡
+                    lv_led_on(admin_laser_leds[i]);
+                } else {
+                    lv_led_set_color(admin_laser_leds[i], lv_color_hex(0x10B981)); // 绿: 畅通
+                    lv_led_on(admin_laser_leds[i]);
+                }
+            }
+        }
+
+        // 更新波形图 (历史 200 bits)
+        if (admin_laser_chart) {
+            for (int i = 0; i < NUM_SCAN_POINTS; i++) {
+                if (admin_laser_series[i]) {
+                    for (int j = 0; j < 200; j++) {
+                        int byteIdx = j / 8;
+                        int bitIdx = 7 - (j % 8); // 假设位序是从高到低存
+                        bool val = (ctx->ui.admin_laser_history[i][byteIdx] >> bitIdx) & 0x01;
+                        
+                        // 采用堆叠式显示，避免5条线重合: 每一路占 1.0 的垂直空间
+                        lv_chart_set_value_by_id(admin_laser_chart, admin_laser_series[i], j, i + (val ? 0.8 : 0));
+                    }
+                }
+            }
+            lv_chart_refresh(admin_laser_chart);
+        }
+    }
+
+    // 7. Admin Outlet Config (Tab Index 2)
+    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 2) {
+        for (int i = 0; i < 8; i++) {
+            if (admin_outlet_ui[i].label_min) {
+                lv_label_set_text_fmt(admin_outlet_ui[i].label_min, "%.1f", ctx->ui.outlets[i].minDiameter);
+            }
+            if (admin_outlet_ui[i].label_max) {
+                lv_label_set_text_fmt(admin_outlet_ui[i].label_max, "%.1f", ctx->ui.outlets[i].maxDiameter);
+            }
+            
+            // 更新复选框状态（注意防止重复触发导致死循环）
+            auto update_cb = [](lv_obj_t* cb, bool target) {
+                if (!cb) return;
+                bool current = lv_obj_has_state(cb, LV_STATE_CHECKED);
+                if (current != target) {
+                    if (target) lv_obj_add_state(cb, LV_STATE_CHECKED);
+                    else lv_obj_clear_state(cb, LV_STATE_CHECKED);
+                }
+            };
+            
+            update_cb(admin_outlet_ui[i].cb_s, (ctx->ui.outlets[i].lengthMask & 0x01));
+            update_cb(admin_outlet_ui[i].cb_m, (ctx->ui.outlets[i].lengthMask & 0x02));
+            update_cb(admin_outlet_ui[i].cb_l, (ctx->ui.outlets[i].lengthMask & 0x04));
+        }
+    }
 
     _lastSnapshot = ctx->ui;
     _isFirstUpdate = false;

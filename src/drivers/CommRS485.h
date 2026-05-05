@@ -31,7 +31,7 @@ private:
     void handleDashboard(JsonObject data);
     void handleAdminEncoder(JsonObject data);
     void handleAdminLaser(JsonObject data);
-    void handleAdminCutter(JsonObject data);
+    void handleAdminOutlets(JsonArray data);
     
     void sendResponse();
     uint8_t calculateCRC8(const char* data, size_t len);

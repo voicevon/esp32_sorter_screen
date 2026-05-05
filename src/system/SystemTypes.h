@@ -63,14 +63,26 @@ struct UISnapshot {
     int32_t       admin_encoder_pulses;
     float         admin_encoder_velocity;
     int8_t        admin_encoder_status;
+    int32_t       admin_encoder_raw;       // 原始值
+    int32_t       admin_encoder_corrected; // 修正值
+    int32_t       admin_encoder_logic;     // 逻辑值
+    int32_t       admin_encoder_zero_count; // 归零次数
+    int32_t       admin_encoder_zero_correct; // 正确次数
+    int32_t       admin_encoder_zero_total;   // 总次数
 
     float         admin_laser_distance;
     float         admin_laser_intensity;
     int8_t        admin_laser_status;
-
-    int32_t       admin_cutter_rpm;
-    float         admin_cutter_current;
-    int8_t        admin_cutter_status;
+    #define NUM_SCAN_POINTS 4
+    uint8_t       admin_laser_states;      // 激光当前状态位掩码
+    uint8_t       admin_laser_history[NUM_SCAN_POINTS][25]; // 激光历史数据 (200 bits = 25 bytes)
+    
+    // --- 下料口配置 (8个出口) ---
+    struct OutletConfig {
+        float minDiameter;
+        float maxDiameter;
+        uint8_t lengthMask; // Bit 0:S, 1:M, 2:L
+    } outlets[8];
 
     // --- 状态与进度 ---
     uint8_t       admin_comm_log_count;

@@ -52,7 +52,29 @@ private:
     lv_obj_t* admin_tv = nullptr;       // 维护页面的嵌套 TabView
     lv_obj_t* admin_comm_hex_label = nullptr; 
     lv_obj_t* admin_comm_ascii_label = nullptr;
+    
+    // --- Encoder Admin Labels ---
+    lv_obj_t* label_admin_encoder_raw = nullptr;
+    lv_obj_t* label_admin_encoder_corrected = nullptr;
+    lv_obj_t* label_admin_encoder_logic = nullptr;
+    lv_obj_t* label_admin_encoder_zero_count = nullptr;
+    lv_obj_t* label_admin_encoder_zero_stats = nullptr;
 
+    // Laser Diag
+    lv_obj_t* admin_laser_leds[5] = {nullptr};
+    lv_obj_t* admin_laser_chart = nullptr;
+    lv_chart_series_t* admin_laser_series[5] = {nullptr};
+
+    // Outlet Config
+    struct OutletUI {
+        lv_obj_t* label_min;
+        lv_obj_t* label_max;
+        lv_obj_t* cb_s;
+        lv_obj_t* cb_m;
+        lv_obj_t* cb_l;
+    } admin_outlet_ui[8];
+
+    // Comm Status
     ICommandBus* _bus = nullptr;
 
 

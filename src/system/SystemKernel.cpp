@@ -54,6 +54,31 @@ void SystemKernel::updateAdminPage(uint8_t pageId) {
     xSemaphoreGive(_mutexCtx);
 }
 
+void SystemKernel::onOutletEdit(uint8_t index, uint8_t action) {
+    if (index >= 8) return;
+    xSemaphoreTake(_mutexCtx, portMAX_DELAY);
+    
+    switch(action) {
+        case 0: _ctx->ui.outlets[index].minDiameter -= 0.1f; break; // Min -
+        case 1: _ctx->ui.outlets[index].minDiameter += 0.1f; break; // Min +
+        case 2: _ctx->ui.outlets[index].maxDiameter -= 0.1f; break; // Max -
+        case 3: _ctx->ui.outlets[index].maxDiameter += 0.1f; break; // Max +
+        case 4: _ctx->ui.outlets[index].lengthMask ^= 0x01; break;  // S Toggle
+        case 5: _ctx->ui.outlets[index].lengthMask ^= 0x02; break;  // M Toggle
+        case 6: _ctx->ui.outlets[index].lengthMask ^= 0x04; break;  // L Toggle
+    }
+
+    // Bounds check
+    if (_ctx->ui.outlets[index].minDiameter < 0) _ctx->ui.outlets[index].minDiameter = 0;
+    if (_ctx->ui.outlets[index].maxDiameter < 0) _ctx->ui.outlets[index].maxDiameter = 0;
+    if (_ctx->ui.outlets[index].minDiameter > 255) _ctx->ui.outlets[index].minDiameter = 255;
+    if (_ctx->ui.outlets[index].maxDiameter > 255) _ctx->ui.outlets[index].maxDiameter = 255;
+
+    _comm.pushEvent("set_outlet", index);
+    _ctx->ui.dirtyFlags |= DF_LIVE_DATA; 
+    xSemaphoreGive(_mutexCtx);
+}
+
 void SystemKernel::executeModeSwitch() {
     if (_pendingMode == _currentMode) return;
 
