@@ -29,8 +29,8 @@ uint8_t CommRS485::calculateCRC8(const char* data, size_t len) {
     return crc;
 }
 
-void CommRS485::pushEvent(const String& cmd, int params) {
-    _eventQueue.push_back({cmd, params});
+void CommRS485::pushEvent(const String& cmd, int index, int state) {
+    _eventQueue.push_back({cmd, index, state});
 }
 
 void CommRS485::loop() {
@@ -81,21 +81,23 @@ void CommRS485::processLine(const String& line) {
         return;
     }
 
+    /* 
     Serial.println("[CommRS485] Received signal frame from master:");
     serializeJsonPretty(doc, Serial);
     Serial.println();
     Serial.printf("[RS485] << RX: %s\n", jsonStr.c_str());
+    */
     
     String type = doc["type"] | "unknown";
     JsonObject data = doc["data"];
     
     if (type == "dashboard") {
         handleDashboard(data);
-    } else if (type == "admin_encoder") {
+    } else if (type == "diag_encoder") {
         handleAdminEncoder(data);
-    } else if (type == "admin_laser") {
+    } else if (type == "diag_laser") {
         handleAdminLaser(data);
-    } else if (type == "admin_outlets") {
+    } else if (type == "diag_outlets" || type == "config_outlets") {
         handleAdminOutlets(doc["data"].as<JsonArray>());
     }
     
@@ -121,16 +123,16 @@ void CommRS485::handleDashboard(JsonObject data) {
 
 void CommRS485::handleAdminEncoder(JsonObject data) {
     if (!_ctx) return;
-    _ctx->ui.admin_encoder_pulses = data["pulse_count"] | 0;
-    _ctx->ui.admin_encoder_velocity = data["velocity"] | 0.0f;
-    _ctx->ui.admin_encoder_status = data["status"] | 0;
+    _ctx->ui.diag_encoder_pulses = data["pulse_count"] | 0;
+    _ctx->ui.diag_encoder_velocity = data["velocity"] | 0.0f;
+    _ctx->ui.diag_encoder_status = data["status"] | 0;
     
-    _ctx->ui.admin_encoder_raw = data["raw_val"] | 0;
-    _ctx->ui.admin_encoder_corrected = data["corrected_val"] | 0;
-    _ctx->ui.admin_encoder_logic = data["logic_val"] | 0;
-    _ctx->ui.admin_encoder_zero_count = data["zero_count"] | 0;
-    _ctx->ui.admin_encoder_zero_correct = data["zero_correct"] | 0;
-    _ctx->ui.admin_encoder_zero_total = data["zero_total"] | 0;
+    _ctx->ui.diag_encoder_raw = data["raw_val"] | 0;
+    _ctx->ui.diag_encoder_corrected = data["corrected_val"] | 0;
+    _ctx->ui.diag_encoder_logic = data["logic_val"] | 0;
+    _ctx->ui.diag_encoder_zero_count = data["zero_count"] | 0;
+    _ctx->ui.diag_encoder_zero_correct = data["zero_correct"] | 0;
+    _ctx->ui.diag_encoder_zero_total = data["zero_total"] | 0;
     
     _ctx->ui.dirtyFlags |= DF_DIAG;
 }
@@ -139,16 +141,16 @@ void CommRS485::handleAdminLaser(JsonObject data) {
     if (!_ctx) return;
     
     // 1. 解析当前状态位掩码
-    _ctx->ui.admin_laser_states = data["states"] | 0;
+    _ctx->ui.diag_laser_states = data["states"] | 0;
 
-    // 2. 解析 5 路历史 Hex 字符串
-    const char* keys[] = {"history_p1", "history_p2", "history_p3", "history_p4", "history_p5"};
-    for (int i = 0; i < 5; i++) {
+    // 2. 解析历史数据
+    const char* keys[] = {"history_p1", "history_p2", "history_p3", "history_p4"};
+    for (int i = 0; i < NUM_SCAN_POINTS; i++) {
         const char* hex = data[keys[i]] | "";
         if (strlen(hex) == 50) { // 25 bytes * 2 chars/byte = 50 chars
             for (int j = 0; j < 25; j++) {
                 char tmp[3] = { hex[j * 2], hex[j * 2 + 1], 0 };
-                _ctx->ui.admin_laser_history[i][j] = (uint8_t)strtol(tmp, NULL, 16);
+                _ctx->ui.diag_laser_history[i][j] = (uint8_t)strtol(tmp, NULL, 16);
             }
         }
     }
@@ -164,6 +166,7 @@ void CommRS485::handleAdminOutlets(JsonArray data) {
         _ctx->ui.outlets[i].minDiameter = obj["min"] | 0.0f;
         _ctx->ui.outlets[i].maxDiameter = obj["max"] | 0.0f;
         _ctx->ui.outlets[i].lengthMask  = obj["mask"] | 0;
+        _ctx->ui.outlets[i].state       = obj["state"] | 0;
         i++;
     }
     _ctx->ui.dirtyFlags |= DF_LIVE_DATA; // Refresh UI
@@ -176,13 +179,15 @@ void CommRS485::sendResponse() {
     if (_ctx) {
         if (_ctx->ui.curMode == MODE_PRODUCTION) {
             _currentPage = "dashboard";
-        } else if (_ctx->ui.curMode == MODE_CONFIGURATION) {
-            switch (_ctx->ui.admin_page_id) {
-                case 0: _currentPage = "admin_encoder"; break;
-                case 1: _currentPage = "admin_laser"; break;
-                case 2: _currentPage = "admin_outlets"; break;
-                case 3: _currentPage = "admin_comm"; break;
-                default: _currentPage = "admin_encoder"; break;
+        } else if (_ctx->ui.curMode == MODE_OUTLET_CONFIG) {
+            _currentPage = "config_outlets";
+        } else if (_ctx->ui.curMode == MODE_DIAGNOSTICS) {
+            switch (_ctx->ui.diag_page_id) {
+                case 0: _currentPage = "diag_encoder"; break;
+                case 1: _currentPage = "diag_laser"; break;
+                case 2: _currentPage = "diag_outlets"; break; // 现在代表诊断
+                case 3: _currentPage = "diag_comm"; break;
+                default: _currentPage = "diag_encoder"; break;
             }
         } else if (_ctx->ui.curMode == MODE_ABOUT) {
             _currentPage = "about";
@@ -196,13 +201,14 @@ void CommRS485::sendResponse() {
         JsonObject obj = events.createNestedObject();
         obj["cmd"] = ev.cmd;
         if (ev.cmd == "set_outlet" && _ctx) {
-            int index = ev.params;
+            int index = ev.index;
             obj["index"] = index;
             obj["min"] = _ctx->ui.outlets[index].minDiameter;
             obj["max"] = _ctx->ui.outlets[index].maxDiameter;
             obj["mask"] = _ctx->ui.outlets[index].lengthMask;
-        } else if (ev.params != -1) {
-            obj["params"] = ev.params;
+        } else {
+            if (ev.index != -1) obj["index"] = ev.index;
+            if (ev.state != -1) obj["state"] = ev.state;
         }
     }
     _eventQueue.clear(); // Consume events
@@ -219,11 +225,12 @@ void CommRS485::sendResponse() {
     
     _serial->print(outStr);
     addLog(outStr, true); // Log raw TX line
-    Serial.printf("[RS485] >> TX: %s", outStr.c_str()); // outStr already has \n
-    Serial.println("[CommRS485] Response sent to master.");
+    // Serial.printf("[RS485] >> TX: %s", outStr.c_str()); 
+    // Serial.println("[CommRS485] Response sent to master.");
 }
 
 void CommRS485::addLog(const String& line, bool isTX) {
+    if (!_ctx) return;
     String prefix = isTX ? "> " : "< ";
     
     // 1. ASCII Column
@@ -231,10 +238,7 @@ void CommRS485::addLog(const String& line, bool isTX) {
     cleanLine.trim();
     String asciiEntry = prefix + cleanLine;
     
-    _logBufferAscii.push_back(asciiEntry);
-    if (_logBufferAscii.size() > 10) _logBufferAscii.erase(_logBufferAscii.begin());
-
-    // 2. HEX Column
+    // 2. HEX Column (提升作用域)
     String hexEntry = prefix;
     for (size_t i = 0; i < line.length() && i < 16; i++) {
         char buf[4];
@@ -243,7 +247,27 @@ void CommRS485::addLog(const String& line, bool isTX) {
     }
     if (line.length() > 16) hexEntry += "..";
     hexEntry.trim();
+    
+    // 存储到上下文供 UI 展示
+    int count = _ctx->ui.diag_comm_log_count;
+    if (count < 10) {
+        strncpy(_ctx->ui.diag_comm_log_ascii[count], asciiEntry.c_str(), 63);
+        _ctx->ui.diag_comm_log_ascii[count][63] = 0;
+        strncpy(_ctx->ui.diag_comm_log_hex[count], hexEntry.c_str(), 127);
+        _ctx->ui.diag_comm_log_hex[count][127] = 0;
 
-    _logBufferHex.push_back(hexEntry);
-    if (_logBufferHex.size() > 10) _logBufferHex.erase(_logBufferHex.begin());
+        _ctx->ui.diag_comm_log_count++;
+    } else {
+        // 滚动逻辑
+        for (int i = 0; i < 9; i++) {
+            strcpy(_ctx->ui.diag_comm_log_ascii[i], _ctx->ui.diag_comm_log_ascii[i+1]);
+            strcpy(_ctx->ui.diag_comm_log_hex[i], _ctx->ui.diag_comm_log_hex[i+1]);
+        }
+        strncpy(_ctx->ui.diag_comm_log_ascii[9], asciiEntry.c_str(), 63);
+        _ctx->ui.diag_comm_log_ascii[9][63] = 0;
+        strncpy(_ctx->ui.diag_comm_log_hex[9], hexEntry.c_str(), 127); 
+        _ctx->ui.diag_comm_log_hex[9][127] = 0;
+    }
+    
+    _ctx->ui.dirtyFlags |= DF_DIAG;
 }

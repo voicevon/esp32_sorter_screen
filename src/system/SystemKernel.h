@@ -11,11 +11,6 @@
 #include "ui/UIManager.h"
 #include "drivers/CommRS485.h"
 
-/**
- * @class SystemKernel
- * @brief 系统内核（核心调度器）。
- * 负责管理所有 App 实例、FreeRTOS 任务、UI 同步以及原子模式切换。
- */
 class SystemKernel : public ICommandBus {
 public:
     SystemKernel(SystemContext* ctx, UIManager* ui);
@@ -23,39 +18,29 @@ public:
     void registerApp(IApp* app);
     void begin(OperationMode initialMode = MODE_PRODUCTION);
 
-    // ICommandBus 接口实现 (UI 交互桥梁)
-    void cmdToggleDiagnosis(bool active) override;
-    
-    // 模式控制
-    void updateOperationMode(OperationMode newMode) override;
+    // ICommandBus 接口实现
+    void cmdToggleDiagnosis(bool active) override {} // Default empty
+    void updateOperationMode(OperationMode mode) override;
     void updateAdminPage(uint8_t pageId) override;
-    void onOutletEdit(uint8_t index, uint8_t action) override;
+    void onOutletEdit(int index, int action) override;
+    void onOutletDiag(int index, bool state) override;
 
 private:
-    // 资源
     SystemContext*        _ctx;
     UIManager*            _ui;
+    CommRS485             _comm;
 
-    // App 管理
-    std::vector<IApp*>    _apps;
-    IApp*                 _currentApp = nullptr;
-    OperationMode         _currentMode = MODE_PRODUCTION;
-    OperationMode         _pendingMode = MODE_PRODUCTION;
-
-    // 任务同步
     SemaphoreHandle_t     _mutexCtx;
-    void controlLoop();
-    void uiLoop();
-    static void controlTaskEntry(void* self);
+    TaskHandle_t          _uiTaskHandle;
+    TaskHandle_t          _commTaskHandle;
+
+    // 任务入口
     static void uiTaskEntry(void* self);
+    static void commTaskEntry(void* self);
 
-    CommRS485 _comm;
-
-    // 辅助
-    bool canSwitchMode() const;
-    void executeModeSwitch();
-    IApp* findApp(OperationMode mode);
-    const char* modeToStr(OperationMode m);
+    // 任务循环
+    void runUILoop();
+    void runCommLoop();
 };
 
-#endif // SYSTEM_KERNEL_H
+#endif

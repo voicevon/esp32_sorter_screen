@@ -5,7 +5,9 @@
 UIManager::UIManager() {
     tabview = nullptr;
     dashboard_tab = nullptr;
-    admin_tab = nullptr;
+    config_tab = nullptr;
+    diag_tab = nullptr;
+    about_tab = nullptr;
     status_label = nullptr;
     _bus = nullptr;
 }
@@ -17,37 +19,18 @@ static void tab_change_event_cb(lv_event_t * e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     
     if (ui && ui->getBus()) {
+        Serial.printf("[UI] Tab Change Event! Target Tab: %d\n", tab_id);
         if (tab_id == 0) {
             ui->getBus()->updateOperationMode(MODE_PRODUCTION);
         } else if (tab_id == 1) {
-            // 系统维护 Tab
-            ui->getBus()->updateOperationMode(MODE_CONFIGURATION);
+            ui->getBus()->updateOperationMode(MODE_OUTLET_CONFIG);
+        } else if (tab_id == 2) {
+            ui->getBus()->updateOperationMode(MODE_DIAGNOSTICS);
         } else {
             ui->getBus()->updateOperationMode(MODE_ABOUT);
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void UIManager::init() {
     lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x0F172A), 0);
@@ -66,20 +49,23 @@ void UIManager::init() {
     lv_obj_set_size(tabview, 800, 480);
 
     dashboard_tab = lv_tabview_add_tab(tabview, "生产主界面");
-    admin_tab = lv_tabview_add_tab(tabview, "系统维护");
+    config_tab = lv_tabview_add_tab(tabview, "参数配置");
+    diag_tab = lv_tabview_add_tab(tabview, "系统维护");
     about_tab = lv_tabview_add_tab(tabview, "关于我们");
 
     lv_obj_set_style_pad_all(dashboard_tab, 0, 0);
     lv_obj_set_style_border_width(dashboard_tab, 0, 0);
     lv_obj_set_scrollbar_mode(dashboard_tab, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_set_scrollbar_mode(admin_tab, LV_SCROLLBAR_MODE_OFF); // 调整为 OFF，由嵌套接管
+    lv_obj_set_scrollbar_mode(config_tab, LV_SCROLLBAR_MODE_OFF); 
+    lv_obj_set_scrollbar_mode(diag_tab, LV_SCROLLBAR_MODE_OFF); 
     lv_obj_set_scrollbar_mode(about_tab, LV_SCROLLBAR_MODE_OFF);
 
     buildDashboardView(dashboard_tab);
-    buildAdminView(admin_tab);
+    buildConfigView(config_tab);
+    buildDiagView(diag_tab);
     buildAboutView(about_tab);
 
-    Serial.println("[UI] Tri-tab UI initialized with Dashboard.");
+    Serial.println("[UI] Multi-tab UI initialized with Diag support.");
 }
 
 void UIManager::updateDashboard(const SystemContext* ctx) {
@@ -87,10 +73,8 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
     
     // 2. Data from Master
     if (_isFirstUpdate || (ctx->ui.dirtyFlags & DF_LIVE_DATA)) {
-        float speed_sec = ctx->ui.dashboard_speed;
-        
         if (label_speed_sec) {
-            lv_label_set_text_fmt(label_speed_sec, "速度: %.1f 根/秒", speed_sec);
+            lv_label_set_text_fmt(label_speed_sec, "速度: %.1f 根/秒", ctx->ui.dashboard_speed);
         }
         if (label_diameter) {
             lv_label_set_text_fmt(label_diameter, "直径: %.1f mm", ctx->ui.dashboard_diameter);
@@ -113,88 +97,82 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
     }
     
     // 4. Comm Log Monitor (Dual Columns)
-    if (admin_comm_hex_label && admin_comm_ascii_label && ctx->ui.curMode == MODE_CONFIGURATION) {
+    if (diag_comm_hex_label && diag_comm_ascii_label && ctx->ui.curMode == MODE_DIAGNOSTICS) {
         String fullHex = "";
         String fullAscii = "";
         
-        if (ctx->ui.admin_comm_log_count == 0) {
+        if (ctx->ui.diag_comm_log_count == 0) {
             fullHex = "Listen...";
             fullAscii = "Wait Data...";
         } else {
-            for (int i = 0; i < ctx->ui.admin_comm_log_count; i++) {
-                fullHex += String(ctx->ui.admin_comm_log_hex[i]) + "\n";
-                fullAscii += String(ctx->ui.admin_comm_log_ascii[i]) + "\n";
+            for (int i = 0; i < ctx->ui.diag_comm_log_count; i++) {
+                fullHex += String(ctx->ui.diag_comm_log_hex[i]) + "\n";
+                fullAscii += String(ctx->ui.diag_comm_log_ascii[i]) + "\n";
             }
         }
-        lv_label_set_text(admin_comm_hex_label, fullHex.c_str());
-        lv_label_set_text(admin_comm_ascii_label, fullAscii.c_str());
+        lv_label_set_text(diag_comm_hex_label, fullHex.c_str());
+        lv_label_set_text(diag_comm_ascii_label, fullAscii.c_str());
     }
     
-    // 5. Admin Encoder Data
-    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 0) {
-        if (label_admin_encoder_raw) {
-            lv_label_set_text_fmt(label_admin_encoder_raw, "原始值 (Raw): %d", ctx->ui.admin_encoder_raw);
+    // 5. Diag Encoder Data
+    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 0) {
+        if (diag_encoder_ui.label_raw) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_raw, "原始值 (Raw): %d", ctx->ui.diag_encoder_raw);
         }
-        if (label_admin_encoder_corrected) {
-            lv_label_set_text_fmt(label_admin_encoder_corrected, "修正值 (Corrected): %d", ctx->ui.admin_encoder_corrected);
+        if (diag_encoder_ui.label_corrected) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_corrected, "修正值 (Corrected): %d", ctx->ui.diag_encoder_corrected);
         }
-        if (label_admin_encoder_logic) {
-            lv_label_set_text_fmt(label_admin_encoder_logic, "逻辑值 (Logic): %d", ctx->ui.admin_encoder_logic);
+        if (diag_encoder_ui.label_logic) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_logic, "逻辑值 (Logic): %d", ctx->ui.diag_encoder_logic);
         }
-        if (label_admin_encoder_zero_count) {
-            lv_label_set_text_fmt(label_admin_encoder_zero_count, "经历 Z 信号次数: %d", ctx->ui.admin_encoder_zero_count);
+        if (diag_encoder_ui.label_zero) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_zero, "经历 Z 信号次数: %d", ctx->ui.diag_encoder_zero_count);
         }
-        if (label_admin_encoder_zero_stats) {
-            lv_label_set_text_fmt(label_admin_encoder_zero_stats, "Zero 统计 (正确/总计): %d / %d", 
-                                  ctx->ui.admin_encoder_zero_correct, ctx->ui.admin_encoder_zero_total);
+        if (diag_encoder_ui.label_status) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_status, "Zero 统计 (正确/总计): %d / %d", 
+                                  ctx->ui.diag_encoder_zero_correct, ctx->ui.diag_encoder_zero_total);
         }
     }
 
-    // 6. Admin Laser Data (Tab Index 1)
-    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 1) {
-        // 更新 LED 指示灯 (位掩码)
+    // 6. Diag Laser Data
+    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 1) {
         for (int i = 0; i < NUM_SCAN_POINTS; i++) {
-            if (admin_laser_leds[i]) {
-                bool isOn = (ctx->ui.admin_laser_states >> i) & 0x01;
+            if (diag_laser_ui.leds[i]) {
+                bool isOn = (ctx->ui.diag_laser_states >> i) & 0x01;
                 if (isOn) {
-                    lv_led_set_color(admin_laser_leds[i], lv_color_hex(0xF43F5E)); // 红: 遮挡
-                    lv_led_on(admin_laser_leds[i]);
+                    lv_led_set_color(diag_laser_ui.leds[i], lv_color_hex(0xF43F5E)); // 红: 遮挡
                 } else {
-                    lv_led_set_color(admin_laser_leds[i], lv_color_hex(0x10B981)); // 绿: 畅通
-                    lv_led_on(admin_laser_leds[i]);
+                    lv_led_set_color(diag_laser_ui.leds[i], lv_color_hex(0x10B981)); // 绿: 畅通
                 }
+                lv_led_on(diag_laser_ui.leds[i]);
             }
         }
 
-        // 更新波形图 (历史 200 bits)
-        if (admin_laser_chart) {
+        if (diag_laser_ui.chart) {
             for (int i = 0; i < NUM_SCAN_POINTS; i++) {
-                if (admin_laser_series[i]) {
+                if (diag_laser_ui.series[i]) {
                     for (int j = 0; j < 200; j++) {
                         int byteIdx = j / 8;
-                        int bitIdx = 7 - (j % 8); // 假设位序是从高到低存
-                        bool val = (ctx->ui.admin_laser_history[i][byteIdx] >> bitIdx) & 0x01;
-                        
-                        // 采用堆叠式显示，避免5条线重合: 每一路占 1.0 的垂直空间
-                        lv_chart_set_value_by_id(admin_laser_chart, admin_laser_series[i], j, i + (val ? 0.8 : 0));
+                        int bitIdx = 7 - (j % 8); 
+                        bool val = (ctx->ui.diag_laser_history[i][byteIdx] >> bitIdx) & 0x01;
+                        lv_chart_set_value_by_id(diag_laser_ui.chart, diag_laser_ui.series[i], j, i + (val ? 0.8 : 0));
                     }
                 }
             }
-            lv_chart_refresh(admin_laser_chart);
+            lv_chart_refresh(diag_laser_ui.chart);
         }
     }
 
-    // 7. Admin Outlet Config (Tab Index 2)
-    if (ctx->ui.curMode == MODE_CONFIGURATION && ctx->ui.admin_page_id == 2) {
+    // 7. Outlet Config (Standalone Config Mode)
+    if (ctx->ui.curMode == MODE_OUTLET_CONFIG) {
         for (int i = 0; i < 8; i++) {
-            if (admin_outlet_ui[i].label_min) {
-                lv_label_set_text_fmt(admin_outlet_ui[i].label_min, "%.1f", ctx->ui.outlets[i].minDiameter);
+            if (config_outlet_ui[i].label_min) {
+                lv_label_set_text_fmt(config_outlet_ui[i].label_min, "%.1f", ctx->ui.outlets[i].minDiameter);
             }
-            if (admin_outlet_ui[i].label_max) {
-                lv_label_set_text_fmt(admin_outlet_ui[i].label_max, "%.1f", ctx->ui.outlets[i].maxDiameter);
+            if (config_outlet_ui[i].label_max) {
+                lv_label_set_text_fmt(config_outlet_ui[i].label_max, "%.1f", ctx->ui.outlets[i].maxDiameter);
             }
             
-            // 更新复选框状态（注意防止重复触发导致死循环）
             auto update_cb = [](lv_obj_t* cb, bool target) {
                 if (!cb) return;
                 bool current = lv_obj_has_state(cb, LV_STATE_CHECKED);
@@ -204,18 +182,26 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
                 }
             };
             
-            update_cb(admin_outlet_ui[i].cb_s, (ctx->ui.outlets[i].lengthMask & 0x01));
-            update_cb(admin_outlet_ui[i].cb_m, (ctx->ui.outlets[i].lengthMask & 0x02));
-            update_cb(admin_outlet_ui[i].cb_l, (ctx->ui.outlets[i].lengthMask & 0x04));
+            update_cb(config_outlet_ui[i].cb_s, (ctx->ui.outlets[i].lengthMask & 0x01));
+            update_cb(config_outlet_ui[i].cb_m, (ctx->ui.outlets[i].lengthMask & 0x02));
+            update_cb(config_outlet_ui[i].cb_l, (ctx->ui.outlets[i].lengthMask & 0x04));
+        }
+    }
+
+    // 8. Diag Outlet Data
+    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 2) {
+        for (int i = 0; i < 8; i++) {
+            if (diag_outlet_leds[i]) {
+                if (ctx->ui.outlets[i].state) {
+                    lv_led_on(diag_outlet_leds[i]);
+                    lv_led_set_color(diag_outlet_leds[i], lv_color_hex(0x38BDF8)); 
+                } else {
+                    lv_led_off(diag_outlet_leds[i]);
+                }
+            }
         }
     }
 
     _lastSnapshot = ctx->ui;
     _isFirstUpdate = false;
 }
-
-// =============================================================================
-// About Section & 80s Apple II Rain Animation
-// =============================================================================
-
-

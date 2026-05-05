@@ -9,7 +9,8 @@
 
 struct UIEvent {
     String cmd;
-    int params; // -1 if not applicable
+    int index;
+    int state; // -1 if not applicable
 };
 
 class CommRS485 {
@@ -17,7 +18,7 @@ public:
     CommRS485();
     void begin(SystemContext* ctx);
     void loop(); // Call frequently to process RX and send TX
-    void pushEvent(const String& cmd, int params = -1);
+    void pushEvent(const String& cmd, int index = -1, int state = -1);
     const std::vector<String>& getLogsHex() const { return _logBufferHex; }
     const std::vector<String>& getLogsAscii() const { return _logBufferAscii; }
 

@@ -1,27 +1,26 @@
 #include "UIManager.h"
 #include <Arduino.h>
 
-static void admin_tab_change_event_cb(lv_event_t * e) {
+static void diag_tab_change_event_cb(lv_event_t * e) {
     lv_obj_t * tv = lv_event_get_current_target(e);
     uint16_t tab_id = lv_tabview_get_tab_act(tv);
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (ui && ui->getBus()) {
         ui->getBus()->updateAdminPage(tab_id);
-        Serial.printf("[UI] Admin Tab Changed to: %d\n", tab_id);
+        Serial.printf("[UI] Diag Sub-Tab Changed to: %d\n", tab_id);
     }
 }
 
-void UIManager::buildAdminView(lv_obj_t* parent) {
-    // 基础容器设置
+void UIManager::buildDiagView(lv_obj_t* parent) {
     lv_obj_set_scrollbar_mode(parent, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_pad_all(parent, 0, 0);
 
-    // 1. 创建嵌套 TabView
-    admin_tv = lv_tabview_create(parent, LV_DIR_TOP, 40);
-    lv_obj_set_style_bg_color(admin_tv, lv_color_hex(0x0F172A), 0);
-    lv_obj_add_event_cb(admin_tv, admin_tab_change_event_cb, LV_EVENT_VALUE_CHANGED, this);
+    // 1. 创建诊断嵌套 TabView (取代原 diag_tv)
+    diag_tv = lv_tabview_create(parent, LV_DIR_TOP, 40);
+    lv_obj_set_style_bg_color(diag_tv, lv_color_hex(0x0F172A), 0);
+    lv_obj_add_event_cb(diag_tv, diag_tab_change_event_cb, LV_EVENT_VALUE_CHANGED, this);
     
-    lv_obj_t* sub_btns = lv_tabview_get_tab_btns(admin_tv);
+    lv_obj_t* sub_btns = lv_tabview_get_tab_btns(diag_tv);
     lv_obj_set_style_bg_color(sub_btns, lv_color_hex(0x1E293B), 0);
     lv_obj_set_style_text_color(sub_btns, lv_color_hex(0x94A3B8), 0);
     lv_obj_set_style_text_font(sub_btns, &ui_font_chs_16, 0);
@@ -29,10 +28,10 @@ void UIManager::buildAdminView(lv_obj_t* parent) {
     lv_obj_set_style_text_color(sub_btns, lv_color_white(), LV_STATE_CHECKED);
 
     // 2. 添加功能 Tab
-    lv_obj_t* t_encoder = lv_tabview_add_tab(admin_tv, "编码器");
-    lv_obj_t* t_laser   = lv_tabview_add_tab(admin_tv, "激光扫描仪");
-    lv_obj_t* t_outlets = lv_tabview_add_tab(admin_tv, "下料口");
-    lv_obj_t* t_comm    = lv_tabview_add_tab(admin_tv, "通讯端口");
+    lv_obj_t* t_encoder = lv_tabview_add_tab(diag_tv, "编码器");
+    lv_obj_t* t_laser   = lv_tabview_add_tab(diag_tv, "激光扫描仪");
+    lv_obj_t* t_outlets = lv_tabview_add_tab(diag_tv, "下料口");
+    lv_obj_t* t_comm    = lv_tabview_add_tab(diag_tv, "通讯端口");
 
     lv_obj_t* sub_tabs[] = {t_encoder, t_laser, t_outlets, t_comm};
     for(auto t : sub_tabs) {
@@ -48,13 +47,19 @@ void UIManager::buildAdminView(lv_obj_t* parent) {
     lv_obj_set_flex_flow(enc_cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_gap(enc_cont, 10, 0);
     
-    this->label_admin_encoder_raw = lv_label_create(enc_cont);
-    this->label_admin_encoder_corrected = lv_label_create(enc_cont);
-    this->label_admin_encoder_logic = lv_label_create(enc_cont);
-    this->label_admin_encoder_zero_count = lv_label_create(enc_cont);
-    this->label_admin_encoder_zero_stats = lv_label_create(enc_cont);
+    diag_encoder_ui.label_raw = lv_label_create(enc_cont);
+    diag_encoder_ui.label_corrected = lv_label_create(enc_cont);
+    diag_encoder_ui.label_logic = lv_label_create(enc_cont);
+    diag_encoder_ui.label_zero = lv_label_create(enc_cont);
+    diag_encoder_ui.label_status = lv_label_create(enc_cont);
     
-    lv_obj_t* enc_labels[] = {label_admin_encoder_raw, label_admin_encoder_corrected, label_admin_encoder_logic, label_admin_encoder_zero_count, label_admin_encoder_zero_stats};
+    lv_obj_t* enc_labels[] = {
+        diag_encoder_ui.label_raw, 
+        diag_encoder_ui.label_corrected, 
+        diag_encoder_ui.label_logic, 
+        diag_encoder_ui.label_zero, 
+        diag_encoder_ui.label_status
+    };
     for(auto l : enc_labels) {
         lv_obj_set_style_text_color(l, lv_color_white(), 0);
         lv_obj_set_style_text_font(l, &ui_font_chs_16, 0);
@@ -82,87 +87,82 @@ void UIManager::buildAdminView(lv_obj_t* parent) {
         lv_obj_set_style_border_width(wrapper, 0, 0);
         lv_obj_set_flex_flow(wrapper, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(wrapper, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        admin_laser_leds[i] = lv_led_create(wrapper);
-        lv_obj_set_size(admin_laser_leds[i], 16, 16);
-        lv_led_set_color(admin_laser_leds[i], lv_color_hex(0x10B981));
-        lv_led_off(admin_laser_leds[i]);
+        
+        diag_laser_ui.leds[i] = lv_led_create(wrapper);
+        lv_obj_set_size(diag_laser_ui.leds[i], 16, 16);
+        lv_led_set_color(diag_laser_ui.leds[i], lv_color_hex(0x10B981));
+        lv_led_off(diag_laser_ui.leds[i]);
+        
         lv_obj_t* label = lv_label_create(wrapper);
         lv_label_set_text_fmt(label, "P%d", i+1);
         lv_obj_set_style_text_color(label, lv_color_hex(0x94A3B8), 0);
         lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
     }
 
-    admin_laser_chart = lv_chart_create(laser_cont);
-    lv_obj_set_size(admin_laser_chart, lv_pct(100), lv_pct(70));
-    lv_obj_align(admin_laser_chart, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_chart_set_type(admin_laser_chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(admin_laser_chart, 200);
-    lv_chart_set_range(admin_laser_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 5);
-    lv_obj_set_style_bg_color(admin_laser_chart, lv_color_hex(0x020617), 0);
-    lv_obj_set_style_border_color(admin_laser_chart, lv_color_hex(0x1E293B), 0);
+    diag_laser_ui.chart = lv_chart_create(laser_cont);
+    lv_obj_set_size(diag_laser_ui.chart, lv_pct(100), lv_pct(70));
+    lv_obj_align(diag_laser_ui.chart, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_chart_set_type(diag_laser_ui.chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(diag_laser_ui.chart, 200);
+    lv_chart_set_range(diag_laser_ui.chart, LV_CHART_AXIS_PRIMARY_Y, 0, 5);
+    lv_obj_set_style_bg_color(diag_laser_ui.chart, lv_color_hex(0x020617), 0);
+    lv_obj_set_style_border_color(diag_laser_ui.chart, lv_color_hex(0x1E293B), 0);
     lv_color_t colors[] = {lv_color_hex(0x38BDF8), lv_color_hex(0x10B981), lv_color_hex(0xF43F5E), lv_color_hex(0xFBBF24)};
-    for(int i=0; i<NUM_SCAN_POINTS; i++) admin_laser_series[i] = lv_chart_add_series(admin_laser_chart, colors[i], LV_CHART_AXIS_PRIMARY_Y);
+    for(int i=0; i<NUM_SCAN_POINTS; i++) {
+        diag_laser_ui.series[i] = lv_chart_add_series(diag_laser_ui.chart, colors[i], LV_CHART_AXIS_PRIMARY_Y);
+    }
 
-    // --- 3. Outlets Tab Layout ---
+    // --- 3. Outlets Diag Layout ---
     lv_obj_t* outlet_cont = lv_obj_create(t_outlets);
     lv_obj_set_size(outlet_cont, lv_pct(100), lv_pct(100));
     lv_obj_set_style_bg_opa(outlet_cont, 0, 0);
     lv_obj_set_style_border_width(outlet_cont, 0, 0);
-    lv_obj_set_flex_flow(outlet_cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_gap(outlet_cont, 5, 0);
+    lv_obj_set_flex_flow(outlet_cont, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_flex_align(outlet_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_gap(outlet_cont, 15, 0);
 
-    auto edit_cb = [](lv_event_t* e) {
+    auto diag_cb = [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         lv_obj_t* obj = lv_event_get_target(e);
-        long encoded = (long)lv_obj_get_user_data(obj);
-        int index = encoded >> 4;
-        int action = encoded & 0x0F;
-        if (ui && ui->getBus()) ui->getBus()->onOutletEdit(index, action);
+        int idx = (int)(long)lv_obj_get_user_data(obj);
+        
+        if (ui && ui->getBus()) {
+            bool currentState = ui->getSnapshot().outlets[idx].state;
+            ui->getBus()->onOutletDiag(idx, !currentState);
+            Serial.printf("[UI] Diag Outlet #%d Toggle: %s\n", idx + 1, !currentState ? "OPEN" : "CLOSE");
+        }
     };
 
     for(int i=0; i<8; i++) {
-        lv_obj_t* row = lv_obj_create(outlet_cont);
-        lv_obj_set_size(row, lv_pct(100), 50);
-        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_bg_color(row, lv_color_hex(0x1E293B), 0);
-        lv_obj_set_style_border_width(row, 0, 0);
-        lv_obj_set_style_pad_all(row, 5, 0);
+        lv_obj_t* item = lv_obj_create(outlet_cont);
+        lv_obj_set_size(item, 85, 100);
+        lv_obj_set_style_bg_color(item, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(item, 1, 0);
+        lv_obj_set_style_border_color(item, lv_color_hex(0x334155), 0);
+        lv_obj_set_flex_flow(item, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(item, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_all(item, 5, 0);
 
-        lv_obj_t* l_idx = lv_label_create(row);
-        lv_label_set_text_fmt(l_idx, "#%d", i+1);
-        lv_obj_set_style_text_color(l_idx, lv_color_hex(0x38BDF8), 0);
+        lv_obj_t* l_idx = lv_label_create(item);
+        lv_label_set_text_fmt(l_idx, "OUT %d", i+1);
+        lv_obj_set_style_text_color(l_idx, lv_color_white(), 0);
+        lv_obj_set_style_text_font(l_idx, &lv_font_montserrat_12, 0);
 
-        auto create_adjust = [&](const char* label, lv_obj_t** val_label, int action_m, int action_p) {
-            lv_obj_t* btn_m = lv_btn_create(row); lv_obj_set_size(btn_m, 28, 28);
-            lv_obj_t* lm = lv_label_create(btn_m); lv_label_set_text(lm, "-"); lv_obj_center(lm);
-            lv_obj_set_user_data(btn_m, (void*)(long)((i<<4)|action_m));
-            lv_obj_add_event_cb(btn_m, edit_cb, LV_EVENT_CLICKED, this);
+        diag_outlet_leds[i] = lv_led_create(item);
+        lv_obj_set_size(diag_outlet_leds[i], 16, 16);
+        lv_led_set_color(diag_outlet_leds[i], lv_color_hex(0x38BDF8));
+        lv_led_off(diag_outlet_leds[i]);
 
-            *val_label = lv_label_create(row);
-            lv_obj_set_width(*val_label, 35);
-            lv_label_set_text(*val_label, "0.0");
-            lv_obj_set_style_text_color(*val_label, lv_color_white(), 0);
-
-            lv_obj_t* btn_p = lv_btn_create(row); lv_obj_set_size(btn_p, 28, 28);
-            lv_obj_t* lp = lv_label_create(btn_p); lv_label_set_text(lp, "+"); lv_obj_center(lp);
-            lv_obj_set_user_data(btn_p, (void*)(long)((i<<4)|action_p));
-            lv_obj_add_event_cb(btn_p, edit_cb, LV_EVENT_CLICKED, this);
-        };
-
-        create_adjust("Min", &admin_outlet_ui[i].label_min, 0, 1);
-        lv_obj_t* div = lv_label_create(row); lv_label_set_text(div, "~");
-        create_adjust("Max", &admin_outlet_ui[i].label_max, 2, 3);
-
-        const char* ln[] = {"S", "M", "L"};
-        lv_obj_t** lp[] = {&admin_outlet_ui[i].cb_s, &admin_outlet_ui[i].cb_m, &admin_outlet_ui[i].cb_l};
-        for(int j=0; j<3; j++) {
-            *lp[j] = lv_checkbox_create(row);
-            lv_checkbox_set_text(*lp[j], ln[j]);
-            lv_obj_set_style_text_color(*lp[j], lv_color_white(), 0);
-            lv_obj_set_user_data(*lp[j], (void*)(long)((i<<4)|(4+j)));
-            lv_obj_add_event_cb(*lp[j], edit_cb, LV_EVENT_VALUE_CHANGED, this);
-        }
+        lv_obj_t* btn = lv_btn_create(item);
+        lv_obj_set_size(btn, 60, 30);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x334155), 0);
+        lv_obj_t* l_btn = lv_label_create(btn);
+        lv_label_set_text(l_btn, "TEST");
+        lv_obj_center(l_btn);
+        lv_obj_set_style_text_font(l_btn, &lv_font_montserrat_12, 0);
+        
+        lv_obj_set_user_data(btn, (void*)(long)i);
+        lv_obj_add_event_cb(btn, diag_cb, LV_EVENT_CLICKED, this);
     }
 
     // --- 4. Comm Port Tab Layout ---
@@ -181,18 +181,18 @@ void UIManager::buildAdminView(lv_obj_t* parent) {
     lv_obj_set_scrollbar_mode(log_cont, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_flex_flow(log_cont, LV_FLEX_FLOW_ROW);
     
-    this->admin_comm_hex_label = lv_label_create(log_cont);
-    lv_obj_set_width(admin_comm_hex_label, 300);
-    lv_obj_set_style_text_color(admin_comm_hex_label, lv_color_hex(0x38BDF8), 0); 
-    lv_obj_set_style_text_font(admin_comm_hex_label, &lv_font_montserrat_12, 0);
+    diag_comm_hex_label = lv_label_create(log_cont);
+    lv_obj_set_width(diag_comm_hex_label, 300);
+    lv_obj_set_style_text_color(diag_comm_hex_label, lv_color_hex(0x38BDF8), 0); 
+    lv_obj_set_style_text_font(diag_comm_hex_label, &lv_font_montserrat_12, 0);
     
     lv_obj_t* line = lv_obj_create(log_cont);
     lv_obj_set_size(line, 2, lv_pct(100));
     lv_obj_set_style_bg_color(line, lv_color_hex(0x1E293B), 0);
     lv_obj_set_style_border_width(line, 0, 0);
 
-    this->admin_comm_ascii_label = lv_label_create(log_cont);
-    lv_obj_set_flex_grow(admin_comm_ascii_label, 1);
-    lv_obj_set_style_text_color(admin_comm_ascii_label, lv_color_hex(0x10B981), 0); 
-    lv_obj_set_style_text_font(admin_comm_ascii_label, &lv_font_montserrat_12, 0);
+    diag_comm_ascii_label = lv_label_create(log_cont);
+    lv_obj_set_flex_grow(diag_comm_ascii_label, 1);
+    lv_obj_set_style_text_color(diag_comm_ascii_label, lv_color_hex(0x10B981), 0); 
+    lv_obj_set_style_text_font(diag_comm_ascii_label, &lv_font_montserrat_12, 0);
 }

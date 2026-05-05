@@ -22,19 +22,21 @@ public:
     void updateDashboard(const SystemContext* ctx);
     void setCommandBus(ICommandBus* bus) { _bus = bus; }
     ICommandBus* getBus() const { return _bus; }
-    lv_obj_t* getAdminTv() const { return admin_tv; }
+    lv_obj_t* getDiagTv() const { return diag_tv; }
+    const UISnapshot& getSnapshot() const { return _lastSnapshot; }
 
 private:
     void buildDashboardView(lv_obj_t* parent);
+    void buildConfigView(lv_obj_t* parent);
+    void buildDiagView(lv_obj_t* parent);
+    void buildAboutView(lv_obj_t* parent);
     
     // --- Tabs ---
     lv_obj_t* tabview = nullptr;
     lv_obj_t* dashboard_tab = nullptr;
-    lv_obj_t* admin_tab = nullptr;
+    lv_obj_t* config_tab = nullptr;
+    lv_obj_t* diag_tab = nullptr; // Top level Diagnostic/Maintenance tab
     lv_obj_t* about_tab = nullptr;
-
-    // --- About Section ---
-    void buildAboutView(lv_obj_t* parent);
 
     // --- Components ---
     lv_obj_t* status_label = nullptr;
@@ -47,36 +49,43 @@ private:
     lv_obj_t* label_diameter = nullptr;
     lv_obj_t* label_frame_counter = nullptr;
     
-    // --- Admin / Maintenance Section ---
-    void buildAdminView(lv_obj_t* parent);
-    lv_obj_t* admin_tv = nullptr;       // 维护页面的嵌套 TabView
-    lv_obj_t* admin_comm_hex_label = nullptr; 
-    lv_obj_t* admin_comm_ascii_label = nullptr;
+    // --- Nested Diagnostic View (Inside Admin Tab) ---
+    lv_obj_t* diag_tv = nullptr;       
     
-    // --- Encoder Admin Labels ---
-    lv_obj_t* label_admin_encoder_raw = nullptr;
-    lv_obj_t* label_admin_encoder_corrected = nullptr;
-    lv_obj_t* label_admin_encoder_logic = nullptr;
-    lv_obj_t* label_admin_encoder_zero_count = nullptr;
-    lv_obj_t* label_admin_encoder_zero_stats = nullptr;
+    // --- Diagnostic Sub-pages UI Cache ---
+    // 1. Encoder Diag
+    struct {
+        lv_obj_t* label_raw;
+        lv_obj_t* label_corrected;
+        lv_obj_t* label_logic;
+        lv_obj_t* label_zero;
+        lv_obj_t* label_status;
+    } diag_encoder_ui;
 
-    // Laser Diag
-    lv_obj_t* admin_laser_leds[5] = {nullptr};
-    lv_obj_t* admin_laser_chart = nullptr;
-    lv_chart_series_t* admin_laser_series[5] = {nullptr};
+    // 2. Laser Diag
+    struct {
+        lv_obj_t* leds[4];
+        lv_obj_t* chart; // Using chart for history
+        lv_chart_series_t* series[4];
+    } diag_laser_ui;
 
-    // Outlet Config
+    // 3. Outlet Diag
+    lv_obj_t* diag_outlet_leds[8];
+
+    // 4. Communication Log Diag
+    lv_obj_t* diag_comm_hex_label;
+    lv_obj_t* diag_comm_ascii_label;
+
+    // Outlet Config UI Cache
     struct OutletUI {
         lv_obj_t* label_min;
         lv_obj_t* label_max;
         lv_obj_t* cb_s;
         lv_obj_t* cb_m;
         lv_obj_t* cb_l;
-    } admin_outlet_ui[8];
+    } config_outlet_ui[8];
 
-    // Comm Status
     ICommandBus* _bus = nullptr;
-
 
     // --- Performance Optimization (Dirty Check) ---
     UISnapshot _lastSnapshot;

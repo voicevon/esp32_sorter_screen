@@ -5,6 +5,9 @@ void UIManager::buildDashboardView(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(parent, lv_color_hex(0x0F172A), 0);
     lv_obj_set_style_border_width(parent, 0, 0);
     lv_obj_set_style_pad_all(parent, 10, 0);
+    
+    // 允许父容器滚动链，确保侧滑能穿透到 tabview
+    lv_obj_add_flag(parent, LV_OBJ_FLAG_SCROLL_CHAIN);
 
     // --- Top Bar ---
     lv_obj_t* top_bar = lv_obj_create(parent);
@@ -13,7 +16,9 @@ void UIManager::buildDashboardView(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(top_bar, lv_color_hex(0x1E293B), 0);
     lv_obj_set_style_border_width(top_bar, 0, 0);
     lv_obj_set_style_radius(top_bar, 12, 0);
-    lv_obj_clear_flag(top_bar, LV_OBJ_FLAG_SCROLLABLE);
+    // 隐藏滚动条但保留滚动属性，以允许手势冒泡
+    lv_obj_set_scrollbar_mode(top_bar, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_add_flag(top_bar, LV_OBJ_FLAG_EVENT_BUBBLE);
 
     lv_obj_t* title_lbl = lv_label_create(top_bar);
     lv_obj_set_style_text_font(title_lbl, &ui_font_chs_16, 0);
@@ -50,7 +55,10 @@ void UIManager::buildDashboardView(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(container, lv_color_hex(0x1E293B), 0);
     lv_obj_set_style_border_width(container, 0, 0);
     lv_obj_set_style_radius(container, 12, 0);
-    lv_obj_clear_flag(container, LV_OBJ_FLAG_SCROLLABLE);
+    // 核心修复：允许滚动链冒泡，隐藏内部滚动条
+    lv_obj_set_scrollbar_mode(container, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_add_flag(container, LV_OBJ_FLAG_SCROLL_CHAIN);
+    lv_obj_add_flag(container, LV_OBJ_FLAG_EVENT_BUBBLE);
     
     static lv_coord_t col_dsc[] = {340, 340, LV_COORD_MAX};
     static lv_coord_t row_dsc[] = {120, 120, LV_COORD_MAX};
@@ -79,7 +87,9 @@ void UIManager::buildDashboardView(lv_obj_t* parent) {
         lv_obj_set_style_bg_color(panel, lv_color_hex(0x334155), 0);
         lv_obj_set_style_border_width(panel, 0, 0);
         lv_obj_set_style_radius(panel, 8, 0);
-        lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
+        // 允许事件穿透
+        lv_obj_set_scrollbar_mode(panel, LV_SCROLLBAR_MODE_OFF);
+        lv_obj_add_flag(panel, LV_OBJ_FLAG_EVENT_BUBBLE);
         
         lv_obj_set_grid_cell(panel, LV_GRID_ALIGN_STRETCH, i % 2, 1,
                                     LV_GRID_ALIGN_STRETCH, i / 2, 1);
