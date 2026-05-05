@@ -104,6 +104,7 @@ void CommRS485::processLine(const String& line) {
 
 void CommRS485::handleDashboard(JsonObject data) {
     if (!_ctx) return;
+    _ctx->ui.frame_counter = data["frame_counter"] | 0;
     _ctx->ui.dashboard_speed = data["speed"] | 0.0f;
     _ctx->ui.dashboard_yield = data["yield"] | 0.0f;
     _ctx->ui.dashboard_capacity = data["capacity"] | 0.0f;

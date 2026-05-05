@@ -21,6 +21,13 @@ void UIManager::buildDashboardView(lv_obj_t* parent) {
     lv_label_set_text(title_lbl, "芦笋分拣系统 - 运行监控");
     lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 20, 0);
 
+    // Frame Counter (Top Left)
+    label_frame_counter = lv_label_create(top_bar);
+    lv_obj_set_style_text_font(label_frame_counter, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(label_frame_counter, lv_color_hex(0x64748B), 0);
+    lv_label_set_text(label_frame_counter, "FC: 0");
+    lv_obj_align(label_frame_counter, LV_ALIGN_LEFT_MID, 320, 0);
+
     // Communication status LED and Label
     lv_obj_t* comm_label = lv_label_create(top_bar);
     lv_obj_set_style_text_font(comm_label, &ui_font_chs_16, 0);

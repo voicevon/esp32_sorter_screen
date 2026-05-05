@@ -26,12 +26,6 @@ public:
     // ICommandBus 接口实现 (UI 交互桥梁)
     void cmdToggleDiagnosis(bool active) override;
     
-    void cmdSerialSendHex(const char* hexStr) override;
-    void cmdSerialToggleAuto(bool enable) override;
-    void cmdSetDiagSubMode(int mode) override;
-    void cmdSetDiagTarget(int id) override;
-    void cmdDiagAction(int actionId) override;
-
     // 模式控制
     void updateOperationMode(OperationMode newMode) override;
 

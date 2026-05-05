@@ -45,6 +45,7 @@ private:
     lv_obj_t* label_yield = nullptr;
     lv_obj_t* label_capacity = nullptr;
     lv_obj_t* label_diameter = nullptr;
+    lv_obj_t* label_frame_counter = nullptr;
     
     // --- Admin / Maintenance Section ---
     void buildAdminView(lv_obj_t* parent);

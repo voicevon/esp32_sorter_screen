@@ -51,6 +51,7 @@ struct UISnapshot {
     OperationMode curMode;
     SystemStatus  sysStatus;
     char          statusText[32];
+    uint32_t      frame_counter;        // 帧序列计数 (代表通讯活跃度)
     
     // --- 生产数据 (来自 Master RS485 JSON) ---
     float         dashboard_speed;

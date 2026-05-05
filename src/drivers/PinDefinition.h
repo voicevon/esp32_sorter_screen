@@ -13,7 +13,7 @@
 #define PIN_RS485_TX_EN  -1    // 硬件自动收发切换，无需使能引脚
 #define RS485_TX_ENABLE  HIGH 
 #define RS485_RX_ENABLE  LOW  
-#define RS485_BAUD       9600
+#define RS485_BAUD       115200
 
 
 

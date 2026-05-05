@@ -101,6 +101,9 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
         if (label_capacity) {
             lv_label_set_text_fmt(label_capacity, "产能: %.0f 根/小时", ctx->ui.dashboard_capacity);
         }
+        if (label_frame_counter) {
+            lv_label_set_text_fmt(label_frame_counter, "FC: %u", ctx->ui.frame_counter);
+        }
     }
     
     // 3. Comm Watchdog LED
