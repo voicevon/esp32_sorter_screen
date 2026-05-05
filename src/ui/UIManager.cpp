@@ -129,6 +129,9 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
             lv_label_set_text_fmt(diag_encoder_ui.label_status, "Zero 统计 (正确/总计): %d / %d", 
                                   ctx->ui.diag_encoder_zero_correct, ctx->ui.diag_encoder_zero_total);
         }
+        if (diag_encoder_ui.label_offset) {
+            lv_label_set_text_fmt(diag_encoder_ui.label_offset, "%d", ctx->ui.diag_encoder_offset);
+        }
     }
 
     // 6. Diag Laser Data

@@ -73,7 +73,7 @@ void CommRS485::processLine(const String& line) {
     }
     
     // Parse JSON
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     DeserializationError error = deserializeJson(doc, jsonStr);
     
     if (error) {
@@ -133,6 +133,7 @@ void CommRS485::handleDiagEncoder(JsonObject data) {
     _ctx->ui.diag_encoder_zero_count = data["zero_count"] | 0;
     _ctx->ui.diag_encoder_zero_correct = data["zero_correct"] | 0;
     _ctx->ui.diag_encoder_zero_total = data["zero_total"] | 0;
+    _ctx->ui.diag_encoder_offset = data["offset"] | 0;
     
     _ctx->ui.dirtyFlags |= DF_DIAG;
 }

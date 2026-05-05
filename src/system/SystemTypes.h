@@ -70,6 +70,7 @@ struct UISnapshot {
     int32_t       diag_encoder_zero_count; // 归零次数
     int32_t       diag_encoder_zero_correct; // 正确次数
     int32_t       diag_encoder_zero_total;   // 总次数
+    int32_t       diag_encoder_offset;       // 零位偏移量
 
     float         diag_laser_distance;
     float         diag_laser_intensity;

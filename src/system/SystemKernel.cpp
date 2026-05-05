@@ -63,6 +63,10 @@ void SystemKernel::onOutletDiag(int index, bool state) {
     _comm.pushEvent("diag_outlet", index, state ? 1 : 0);
 }
 
+void SystemKernel::pushEvent(const String& cmd, int index, int params) {
+    _comm.pushEvent(cmd, index, params);
+}
+
 // --- Task Entry Points ---
 void SystemKernel::uiTaskEntry(void* self) {
     ((SystemKernel*)self)->runUILoop();

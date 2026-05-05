@@ -60,6 +60,7 @@ private:
         lv_obj_t* label_logic;
         lv_obj_t* label_zero;
         lv_obj_t* label_status;
+        lv_obj_t* label_offset;
     } diag_encoder_ui;
 
     // 2. Laser Diag

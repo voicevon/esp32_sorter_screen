@@ -24,6 +24,7 @@ public:
     void updateAdminPage(uint8_t pageId) override;
     void onOutletEdit(int index, int action) override;
     void onOutletDiag(int index, bool state) override;
+    void pushEvent(const String& cmd, int index, int params) override;
 
 private:
     SystemContext*        _ctx;

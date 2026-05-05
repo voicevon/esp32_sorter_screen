@@ -13,6 +13,7 @@ public:
     virtual void updateAdminPage(uint8_t pageId) = 0;
     virtual void onOutletEdit(int index, int action) = 0;
     virtual void onOutletDiag(int index, bool state) = 0;
+    virtual void pushEvent(const String& cmd, int index, int params) = 0;
 };
 
 #endif
