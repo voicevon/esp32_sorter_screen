@@ -8,10 +8,6 @@ UIManager::UIManager() {
     admin_tab = nullptr;
     status_label = nullptr;
     _bus = nullptr;
-
-    dashboard_tare_btn = nullptr;
-    dashboard_tare_lbl = nullptr;
-    dashboard_header = nullptr;
 }
 
 
@@ -113,6 +109,24 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
         lv_obj_set_style_bg_color(comm_led, isOk ? lv_color_hex(0x22C55E) : lv_color_hex(0xEF4444), 0);
     }
     
+    // 4. Comm Log Monitor (Dual Columns)
+    if (admin_comm_hex_label && admin_comm_ascii_label && ctx->ui.curMode == MODE_CONFIGURATION) {
+        String fullHex = "";
+        String fullAscii = "";
+        
+        if (ctx->ui.admin_comm_log_count == 0) {
+            fullHex = "Listen...";
+            fullAscii = "Wait Data...";
+        } else {
+            for (int i = 0; i < ctx->ui.admin_comm_log_count; i++) {
+                fullHex += String(ctx->ui.admin_comm_log_hex[i]) + "\n";
+                fullAscii += String(ctx->ui.admin_comm_log_ascii[i]) + "\n";
+            }
+        }
+        lv_label_set_text(admin_comm_hex_label, fullHex.c_str());
+        lv_label_set_text(admin_comm_ascii_label, fullAscii.c_str());
+    }
+
     _lastSnapshot = ctx->ui;
     _isFirstUpdate = false;
 }

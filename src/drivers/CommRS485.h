@@ -18,6 +18,8 @@ public:
     void begin(SystemContext* ctx);
     void loop(); // Call frequently to process RX and send TX
     void pushEvent(const String& cmd, int params = -1);
+    const std::vector<String>& getLogsHex() const { return _logBufferHex; }
+    const std::vector<String>& getLogsAscii() const { return _logBufferAscii; }
 
 private:
     SystemContext* _ctx;
@@ -34,8 +36,14 @@ private:
     void sendResponse();
     uint8_t calculateCRC8(const char* data, size_t len);
     
+    
     // Internal cache for the current tab page to report back to Master
     String _currentPage;
+
+    // Diagnosis Logging
+    std::vector<String> _logBufferHex;
+    std::vector<String> _logBufferAscii;
+    void addLog(const String& line, bool isTX);
 };
 
 #endif // COMM_RS485_H

@@ -9,7 +9,7 @@ CommRS485::CommRS485() {
 void CommRS485::begin(SystemContext* ctx) {
     _ctx = ctx;
     // RS485_BAUD is defined in PinDefinition.h
-    _serial->begin(RS485_BAUD, SERIAL_8N1, PIN_RS485_RX, PIN_RS485_TX);
+    _serial->begin(RS485_BAUD, SERIAL_8N2, PIN_RS485_RX, PIN_RS485_TX);
     _rxBuffer.reserve(512);
     Serial.println("[CommRS485] Initialized as Slave.");
 }
@@ -37,6 +37,7 @@ void CommRS485::loop() {
     while (_serial->available()) {
         char c = _serial->read();
         if (c == '\n') {
+            addLog(_rxBuffer, false); // Log raw RX line
             processLine(_rxBuffer);
             _rxBuffer = "";
         } else {
@@ -171,5 +172,32 @@ void CommRS485::sendResponse() {
     outStr += "\n";
     outStr.toUpperCase(); // Optional, but usually CRC hex is uppercase
     
+    
     _serial->print(outStr);
+    addLog(outStr, true); // Log raw TX line
+}
+
+void CommRS485::addLog(const String& line, bool isTX) {
+    String prefix = isTX ? "> " : "< ";
+    
+    // 1. ASCII Column
+    String cleanLine = line;
+    cleanLine.trim();
+    String asciiEntry = prefix + cleanLine;
+    
+    _logBufferAscii.push_back(asciiEntry);
+    if (_logBufferAscii.size() > 10) _logBufferAscii.erase(_logBufferAscii.begin());
+
+    // 2. HEX Column
+    String hexEntry = prefix;
+    for (size_t i = 0; i < line.length() && i < 16; i++) {
+        char buf[4];
+        sprintf(buf, "%02X ", (uint8_t)line[i]);
+        hexEntry += buf;
+    }
+    if (line.length() > 16) hexEntry += "..";
+    hexEntry.trim();
+
+    _logBufferHex.push_back(hexEntry);
+    if (_logBufferHex.size() > 10) _logBufferHex.erase(_logBufferHex.begin());
 }

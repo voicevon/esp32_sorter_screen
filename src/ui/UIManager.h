@@ -23,8 +23,6 @@ public:
     void setCommandBus(ICommandBus* bus) { _bus = bus; }
     ICommandBus* getBus() const { return _bus; }
     lv_obj_t* getAdminTv() const { return admin_tv; }
-    void showTargetBottomSheet();
-    void closeTargetBottomSheet();
 
 private:
     void buildDashboardView(lv_obj_t* parent);
@@ -48,17 +46,11 @@ private:
     lv_obj_t* label_capacity = nullptr;
     lv_obj_t* label_diameter = nullptr;
     
-    lv_obj_t* target_sheet = nullptr;
-    lv_obj_t* target_sheet_bg = nullptr;
-
-    // --- 序列化操作 UI 引用 ---
-    lv_obj_t* dashboard_tare_btn = nullptr;
-    lv_obj_t* dashboard_tare_lbl = nullptr;
-    lv_obj_t* dashboard_header = nullptr; // 用于回迁 target_label 的容器
-
     // --- Admin / Maintenance Section ---
     void buildAdminView(lv_obj_t* parent);
     lv_obj_t* admin_tv = nullptr;       // 维护页面的嵌套 TabView
+    lv_obj_t* admin_comm_hex_label = nullptr; 
+    lv_obj_t* admin_comm_ascii_label = nullptr;
 
     ICommandBus* _bus = nullptr;
 

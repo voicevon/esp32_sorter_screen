@@ -2,7 +2,7 @@
 #define PIN_DEFINITION_H
 
 /* 
- * ESP32-S3 Weight Master - 硬件引脚与寄存器统一定义
+ * ESP32-S3 Sorter Screen - 硬件引脚与寄存器统一定义
  * 本文件管理业务层的引脚常量。LCD 和 Touch 的引脚归 TouchScreen 管。
  */
 
@@ -15,18 +15,6 @@
 #define RS485_RX_ENABLE  LOW  
 #define RS485_BAUD       9600
 
-// --- 旋转编码器 (HMI 交互 - 在新大屏中可能不再需要，暂时保留防止编译报错) ---
-#define PIN_ENCODER_A       -1
-#define PIN_ENCODER_B       -1  
-#define PIN_ENCODER_BUTTON  -1  
 
-// --- 从机与电机 ID 分配 ---
-#define NUM_SLAVES      20  // 称重单元总数 (1-10，或者之前的 20)
-#define MOTOR_ID_BELT1  21  // 收集带 (一级)
-#define MOTOR_ID_BELT2  22  // 输出带 (二级)
-
-// --- Modbus 寄存器地址 (必须与从机保持一致) ---
-#define REG_WEIGHT_H    0x0000  // 称重值高位 (Float)
-#define REG_STATUS      0x0002  // 运行状态
 
 #endif // PIN_DEFINITION_H

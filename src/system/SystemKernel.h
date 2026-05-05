@@ -24,18 +24,7 @@ public:
     void begin(OperationMode initialMode = MODE_PRODUCTION);
 
     // ICommandBus 接口实现 (UI 交互桥梁)
-    void cmdGlobalTare() override;
-    void cmdStartScan() override;
-    void cmdCancelScan() override;
     void cmdToggleDiagnosis(bool active) override;
-    void cmdServoTest(int id, bool open) override;
-    void cmdGlobalServo(bool open) override;
-    void cmdBeltTest(int beltId, int distanceMm) override;
-    void cmdBeltRun(int beltId, bool run) override;
-    void cmdTriggerBeltScan() override;
-    void cmdUpdateTargetBase(float delta) override;
-    void cmdUpdateTargetOffset(float delta) override;
-    void cmdUpdateTargets(float dMin, float dMax) override;
     
     void cmdSerialSendHex(const char* hexStr) override;
     void cmdSerialToggleAuto(bool enable) override;

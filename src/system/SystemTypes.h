@@ -72,8 +72,9 @@ struct UISnapshot {
     int8_t        admin_cutter_status;
 
     // --- 状态与进度 ---
-    bool          isTareRunning;      
-    int           tareProgress;       
+    uint8_t       admin_comm_log_count;
+    char          admin_comm_log_hex[10][128]; 
+    char          admin_comm_log_ascii[10][64];
 
     uint32_t      last_comm_time;       // 最后一次成功通讯的时间戳
     uint32_t      dirtyFlags;           // 脏标记位掩码

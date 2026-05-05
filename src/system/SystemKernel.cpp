@@ -31,29 +31,11 @@ void SystemKernel::begin(OperationMode initialMode) {
     updateOperationMode(initialMode);
 }
 
-// =============================================================================
+// =============================================
 // ICommandBus 实现 (路由到具体 App)
-// =============================================================================
+// =============================================
 
-void SystemKernel::cmdGlobalTare() {
-    _comm.pushEvent("tare");
-}
-void SystemKernel::cmdGlobalServo(bool open) {}
-void SystemKernel::cmdStartScan() {}
-void SystemKernel::cmdCancelScan() {}
 void SystemKernel::cmdToggleDiagnosis(bool active) {}
-void SystemKernel::cmdServoTest(int id, bool open) {}
-void SystemKernel::cmdBeltTest(int beltIndex, int distanceMm) {}
-void SystemKernel::cmdBeltRun(int beltIndex, bool run) {}
-void SystemKernel::cmdTriggerBeltScan() {}
-void SystemKernel::cmdSerialSendHex(const char* hexStr) {}
-void SystemKernel::cmdSerialToggleAuto(bool enable) {}
-void SystemKernel::cmdSetDiagSubMode(int mode) {}
-void SystemKernel::cmdSetDiagTarget(int id) {}
-void SystemKernel::cmdDiagAction(int actionId) {}
-void SystemKernel::cmdUpdateTargetBase(float delta) {}
-void SystemKernel::cmdUpdateTargetOffset(float delta) {}
-void SystemKernel::cmdUpdateTargets(float dMin, float dMax) {}
 
 // =============================================================================
 // 模式管理
@@ -139,6 +121,15 @@ void SystemKernel::uiLoop() {
 
         // 总是保持实时数据的脏标记
         _ctx->ui.dirtyFlags |= DF_LIVE_DATA; 
+
+        // 同步通讯日志 (分列显示)
+        const auto& logsHex = _comm.getLogsHex();
+        const auto& logsAscii = _comm.getLogsAscii();
+        _ctx->ui.admin_comm_log_count = logsHex.size();
+        for (size_t i = 0; i < logsHex.size() && i < 10; ++i) {
+            strncpy(_ctx->ui.admin_comm_log_hex[i], logsHex[i].c_str(), 128);
+            strncpy(_ctx->ui.admin_comm_log_ascii[i], logsAscii[i].c_str(), 64);
+        }
 
         xSemaphoreGive(_mutexCtx);
 

@@ -2,98 +2,7 @@
 #include <Arduino.h>
 
 static void admin_tab_change_event_cb(lv_event_t * e) {
-    // 占位
-}
-
-static void btn_scan_event_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) ui->getBus()->cmdStartScan();
-}
-
-static void diag_switch_event_cb(lv_event_t * e) {
-    // 仅保留业务指令，不再触发行销模式切换
-    lv_obj_t * obj = lv_event_get_target(e);
-    bool active = lv_obj_has_state(obj, LV_STATE_CHECKED);
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) ui->getBus()->cmdToggleDiagnosis(active);
-}
-
-static void belt_diag_switch_event_cb(lv_event_t * e) {
-    // 仅用于 UI 状态控制或内部标志，不再干预全局运行模式
-}
-
-static void belt_scan_event_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) {
-        ui->getBus()->cmdTriggerBeltScan();
-    }
-}
-
-static void serial_send_preset_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    lv_obj_t* btn = lv_event_get_target(e);
-    lv_obj_t* lbl = lv_obj_get_child(btn, 0);
-    const char* preset = (const char*)lv_obj_get_user_data(btn);
-    if (ui && ui->getBus() && preset) {
-        ui->getBus()->cmdSerialSendHex(preset);
-    }
-}
-
-static void serial_auto_switch_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    lv_obj_t* obj = lv_event_get_target(e);
-    bool active = lv_obj_has_state(obj, LV_STATE_CHECKED);
-    if (ui && ui->getBus()) ui->getBus()->cmdSerialToggleAuto(active);
-}
-
-static void servo_test_event_cb(lv_event_t * e) {
-    // 占位: 芦笋分拣机暂无舵机测试
-}
-
-static void btn_global_open_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) ui->getBus()->cmdGlobalServo(true);
-}
-
-static void btn_global_close_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) ui->getBus()->cmdGlobalServo(false);
-}
-
-static void btn_belt1_test_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    lv_obj_t * btn = lv_event_get_target(e);
-    lv_obj_t * label = lv_obj_get_child(btn, 0);
-    const char* text = lv_label_get_text(label);
-    int dist = atoi(text);
-    if (dist > 0 && ui && ui->getBus()) {
-        ui->getBus()->cmdBeltTest(0, dist); // 使用逻辑索引 0 (一级皮带)
-    }
-}
-
-static void btn_belt2_test_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    lv_obj_t * btn = lv_event_get_target(e);
-    lv_obj_t * label = lv_obj_get_child(btn, 0);
-    const char* text = lv_label_get_text(label);
-    int dist = atoi(text);
-    if (dist > 0 && ui && ui->getBus()) {
-        ui->getBus()->cmdBeltTest(1, dist); // 使用逻辑索引 1 (二级皮带)
-    }
-}
-
-static void btn_belt2_start_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) {
-        ui->getBus()->cmdBeltRun(1, true);
-    }
-}
-
-static void btn_belt2_stop_cb(lv_event_t * e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui && ui->getBus()) {
-        ui->getBus()->cmdBeltRun(1, false);
-    }
+    // 预留：当切换子页面（如编码器、激光等）时可在此处理特定逻辑
 }
 
 void UIManager::buildAdminView(lv_obj_t* parent) {
@@ -113,15 +22,56 @@ void UIManager::buildAdminView(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(sub_btns, lv_color_hex(0x38BDF8), LV_PART_INDICATOR);
     lv_obj_set_style_text_color(sub_btns, lv_color_white(), LV_STATE_CHECKED);
 
-    // 2. 添加三个功能 Tab
+    // 2. 添加功能 Tab (目前主要展示通讯监控)
     lv_obj_t* t_encoder = lv_tabview_add_tab(admin_tv, "编码器");
-    lv_obj_t* t_laser = lv_tabview_add_tab(admin_tv, "激光扫描仪");
-    lv_obj_t* t_cutter = lv_tabview_add_tab(admin_tv, "旋转切割刀");
+    lv_obj_t* t_laser   = lv_tabview_add_tab(admin_tv, "激光扫描仪");
+    lv_obj_t* t_cutter  = lv_tabview_add_tab(admin_tv, "旋转切割刀");
+    lv_obj_t* t_comm    = lv_tabview_add_tab(admin_tv, "通讯端口");
 
     // 统一设置各 Tab 样式
-    lv_obj_t* sub_tabs[] = {t_encoder, t_laser, t_cutter};
+    lv_obj_t* sub_tabs[] = {t_encoder, t_laser, t_cutter, t_comm};
     for(auto t : sub_tabs) {
         lv_obj_set_style_pad_all(t, 15, 0);
         lv_obj_set_scrollbar_mode(t, LV_SCROLLBAR_MODE_OFF); 
     }
+
+    // --- 通讯端口监控页面布局 ---
+    lv_obj_t* comm_info = lv_label_create(t_comm);
+    lv_obj_set_style_text_color(comm_info, lv_color_hex(0x94A3B8), 0);
+    lv_obj_set_style_text_font(comm_info, &ui_font_chs_16, 0);
+    lv_label_set_text_fmt(comm_info, "串口: Serial1 (RX:%d TX:%d) | 波特率: %d", PIN_RS485_RX, PIN_RS485_TX, RS485_BAUD);
+    
+    lv_obj_t* log_cont = lv_obj_create(t_comm);
+    lv_obj_set_size(log_cont, lv_pct(100), lv_pct(80));
+    lv_obj_align(log_cont, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(log_cont, lv_color_hex(0x020617), 0);
+    lv_obj_set_style_border_width(log_cont, 1, 0);
+    lv_obj_set_style_border_color(log_cont, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_pad_all(log_cont, 2, 0);
+    lv_obj_set_scrollbar_mode(log_cont, LV_SCROLLBAR_MODE_AUTO);
+    
+    lv_obj_set_flex_flow(log_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(log_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+
+    // HEX 列 (左侧)
+    lv_obj_t* hex_label = lv_label_create(log_cont);
+    lv_obj_set_width(hex_label, 300);
+    lv_obj_set_style_text_color(hex_label, lv_color_hex(0x38BDF8), 0); 
+    lv_obj_set_style_text_font(hex_label, &lv_font_montserrat_12, 0);
+    lv_label_set_text(hex_label, "HEX RAW");
+    
+    lv_obj_t* line = lv_obj_create(log_cont);
+    lv_obj_set_size(line, 2, lv_pct(100));
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+
+    // ASCII 列 (右侧)
+    lv_obj_t* ascii_label = lv_label_create(log_cont);
+    lv_obj_set_flex_grow(ascii_label, 1);
+    lv_obj_set_style_text_color(ascii_label, lv_color_hex(0x10B981), 0); 
+    lv_obj_set_style_text_font(ascii_label, &lv_font_montserrat_12, 0);
+    lv_label_set_text(ascii_label, "ASCII STRING");
+    
+    this->admin_comm_hex_label = hex_label;
+    this->admin_comm_ascii_label = ascii_label;
 }
