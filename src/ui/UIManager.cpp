@@ -12,7 +12,7 @@ UIManager::UIManager() {
 
 
 static void tab_change_event_cb(lv_event_t * e) {
-    lv_obj_t * tv = lv_event_get_target(e);
+    lv_obj_t * tv = lv_event_get_current_target(e);
     uint16_t tab_id = lv_tabview_get_tab_act(tv);
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     

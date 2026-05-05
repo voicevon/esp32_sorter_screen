@@ -47,6 +47,13 @@ void SystemKernel::updateOperationMode(OperationMode newMode) {
     _pendingMode = newMode;
 }
 
+void SystemKernel::updateAdminPage(uint8_t pageId) {
+    xSemaphoreTake(_mutexCtx, portMAX_DELAY);
+    _ctx->ui.admin_page_id = pageId;
+    _ctx->ui.dirtyFlags |= DF_LIVE_DATA; // Trigger send immediately
+    xSemaphoreGive(_mutexCtx);
+}
+
 void SystemKernel::executeModeSwitch() {
     if (_pendingMode == _currentMode) return;
 

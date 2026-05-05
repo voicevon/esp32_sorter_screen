@@ -77,6 +77,8 @@ struct UISnapshot {
     char          admin_comm_log_hex[10][128]; 
     char          admin_comm_log_ascii[10][64];
 
+    uint8_t       admin_page_id;        // 0=encoder, 1=laser, 2=cutter, 3=comm
+    
     uint32_t      last_comm_time;       // 最后一次成功通讯的时间戳
     uint32_t      dirtyFlags;           // 脏标记位掩码
 };

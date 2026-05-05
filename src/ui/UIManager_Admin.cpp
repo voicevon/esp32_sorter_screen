@@ -2,7 +2,13 @@
 #include <Arduino.h>
 
 static void admin_tab_change_event_cb(lv_event_t * e) {
-    // 预留：当切换子页面（如编码器、激光等）时可在此处理特定逻辑
+    lv_obj_t * tv = lv_event_get_current_target(e);
+    uint16_t tab_id = lv_tabview_get_tab_act(tv);
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (ui && ui->getBus()) {
+        ui->getBus()->updateAdminPage(tab_id);
+        Serial.printf("[UI] Admin Tab Changed to: %d\n", tab_id);
+    }
 }
 
 void UIManager::buildAdminView(lv_obj_t* parent) {

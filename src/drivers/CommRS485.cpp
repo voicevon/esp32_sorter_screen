@@ -80,6 +80,11 @@ void CommRS485::processLine(const String& line) {
         Serial.printf("[CommRS485] JSON parse failed: %s\n", error.c_str());
         return;
     }
+
+    Serial.println("[CommRS485] Received signal frame from master:");
+    serializeJsonPretty(doc, Serial);
+    Serial.println();
+    Serial.printf("[RS485] << RX: %s\n", jsonStr.c_str());
     
     String type = doc["type"] | "unknown";
     JsonObject data = doc["data"];
@@ -98,7 +103,9 @@ void CommRS485::processLine(const String& line) {
         _ctx->ui.last_comm_time = millis();
     }
     
-    // Since we are Slave, we must reply immediately upon receiving a valid request
+    // Since we are Slave, we must reply immediately upon receiving a valid request.
+    // Add a small delay to allow the Master to switch its RS485 transceiver to RX mode.
+    delay(5); 
     sendResponse();
 }
 
@@ -144,9 +151,15 @@ void CommRS485::sendResponse() {
         if (_ctx->ui.curMode == MODE_PRODUCTION) {
             _currentPage = "dashboard";
         } else if (_ctx->ui.curMode == MODE_CONFIGURATION) {
-            // Mapping these roughly, Admin tabs have their own submodes or we can assume it based on current tab
-            // In a real scenario, UIManager should update _currentPage more explicitly.
-            _currentPage = "admin_encoder"; // fallback/placeholder
+            switch (_ctx->ui.admin_page_id) {
+                case 0: _currentPage = "admin_encoder"; break;
+                case 1: _currentPage = "admin_laser"; break;
+                case 2: _currentPage = "admin_cutter"; break;
+                case 3: _currentPage = "admin_comm"; break;
+                default: _currentPage = "admin_encoder"; break;
+            }
+        } else if (_ctx->ui.curMode == MODE_ABOUT) {
+            _currentPage = "about";
         }
     }
     
@@ -171,11 +184,11 @@ void CommRS485::sendResponse() {
     if (crc < 0x10) outStr += "0"; // Pad zero
     outStr += String(crc, HEX);
     outStr += "\n";
-    outStr.toUpperCase(); // Optional, but usually CRC hex is uppercase
-    
     
     _serial->print(outStr);
     addLog(outStr, true); // Log raw TX line
+    Serial.printf("[RS485] >> TX: %s", outStr.c_str()); // outStr already has \n
+    Serial.println("[CommRS485] Response sent to master.");
 }
 
 void CommRS485::addLog(const String& line, bool isTX) {

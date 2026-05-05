@@ -1,21 +1,15 @@
 #ifndef I_COMMAND_BUS_H
 #define I_COMMAND_BUS_H
 
-/**
- * @interface ICommandBus
- * @brief 命令总线接口，用于解耦 UI 层与应用业务层。
- * 
- * UIManager 通过此接口发送指令，而不直接依赖全局函数。
- * AppController 将实现此接口并注入到 UIManager。
- */
+#include "system/SystemTypes.h"
+
 class ICommandBus {
 public:
     virtual ~ICommandBus() = default;
 
-    // --- 核心业务命令 ---
     virtual void cmdToggleDiagnosis(bool active) = 0;
-
     virtual void updateOperationMode(OperationMode mode) = 0;
+    virtual void updateAdminPage(uint8_t pageId) = 0;
 };
 
 #endif // I_COMMAND_BUS_H

@@ -28,6 +28,7 @@ public:
     
     // 模式控制
     void updateOperationMode(OperationMode newMode) override;
+    void updateAdminPage(uint8_t pageId) override;
 
 private:
     // 资源
