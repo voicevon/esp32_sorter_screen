@@ -30,9 +30,9 @@ private:
     
     void processLine(const String& line);
     void handleDashboard(JsonObject data);
-    void handleAdminEncoder(JsonObject data);
-    void handleAdminLaser(JsonObject data);
-    void handleAdminOutlets(JsonArray data);
+    void handleDiagEncoder(JsonObject data);
+    void handleDiagLaser(JsonObject data);
+    void handleDiagOutlets(JsonArray data);
     
     void sendResponse();
     uint8_t calculateCRC8(const char* data, size_t len);

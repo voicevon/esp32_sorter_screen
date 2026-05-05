@@ -88,17 +88,17 @@ void CommRS485::processLine(const String& line) {
     Serial.printf("[RS485] << RX: %s\n", jsonStr.c_str());
     */
     
-    String type = doc["type"] | "unknown";
+    String page = doc["page"] | "unknown";
     JsonObject data = doc["data"];
     
-    if (type == "dashboard") {
+    if (page == "dashboard") {
         handleDashboard(data);
-    } else if (type == "diag_encoder") {
-        handleAdminEncoder(data);
-    } else if (type == "diag_laser") {
-        handleAdminLaser(data);
-    } else if (type == "diag_outlets" || type == "config_outlets") {
-        handleAdminOutlets(doc["data"].as<JsonArray>());
+    } else if (page == "diag_encoder") {
+        handleDiagEncoder(data);
+    } else if (page == "diag_laser") {
+        handleDiagLaser(data);
+    } else if (page == "diag_outlets" || page == "config_outlets") {
+        handleDiagOutlets(doc["data"].as<JsonArray>());
     }
     
     if (_ctx) {
@@ -121,7 +121,7 @@ void CommRS485::handleDashboard(JsonObject data) {
     _ctx->ui.dirtyFlags |= DF_LIVE_DATA; // Trigger UI update
 }
 
-void CommRS485::handleAdminEncoder(JsonObject data) {
+void CommRS485::handleDiagEncoder(JsonObject data) {
     if (!_ctx) return;
     _ctx->ui.diag_encoder_pulses = data["pulse_count"] | 0;
     _ctx->ui.diag_encoder_velocity = data["velocity"] | 0.0f;
@@ -137,7 +137,7 @@ void CommRS485::handleAdminEncoder(JsonObject data) {
     _ctx->ui.dirtyFlags |= DF_DIAG;
 }
 
-void CommRS485::handleAdminLaser(JsonObject data) {
+void CommRS485::handleDiagLaser(JsonObject data) {
     if (!_ctx) return;
     
     // 1. 解析当前状态位掩码
@@ -158,7 +158,7 @@ void CommRS485::handleAdminLaser(JsonObject data) {
     _ctx->ui.dirtyFlags |= DF_DIAG;
 }
 
-void CommRS485::handleAdminOutlets(JsonArray data) {
+void CommRS485::handleDiagOutlets(JsonArray data) {
     if (!_ctx) return;
     int i = 0;
     for (JsonObject obj : data) {
@@ -194,7 +194,7 @@ void CommRS485::sendResponse() {
         }
     }
     
-    doc["current_page"] = _currentPage;
+    doc["page"] = _currentPage;
     
     JsonArray events = doc.createNestedArray("events");
     for (const auto& ev : _eventQueue) {

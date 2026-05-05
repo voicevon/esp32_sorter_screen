@@ -32,7 +32,7 @@
 | `data.capacity` | int | 实时产能 | 单位：根/小时 |
 | `data.diameter` | float | 最新物料直径 | 单位：mm |
 
-**示例**: `{"type":"dashboard","data":{"up_counter":123,"speed":2.5,"yield":5000,"capacity":9000,"diameter":18.5}}`
+**示例**: `{"page":"dashboard","data":{"up_counter":123,"speed":2.5,"yield":5000,"capacity":9000,"diameter":18.5}}`
 
 ---
 
@@ -41,8 +41,7 @@
 
 | 字段 (JSON Key) | 类型 | 物理含义 | 备注 |
 | :--- | :--- | :--- | :--- |
-| `type` | string | 数据包类型 | 固定为 "ack" |
-| `current_page` | string | 当前显示页面 | 如 "dashboard", "admin", "config" |
+| `page` | string | 当前页面标识 | 如 "dashboard", "config", "diag_comm", "diag_encoder", "diag_outlets", "about" |
 | `events` | array | 待处理事件队列 | 包含用户在屏幕上的点击动作 |
 | `events[].cmd` | string | 指令名称 | 如 "tare" (置零), "start" (启动) |
 | `events[].params` | int | 指令参数 | 如设置的具体数值或索引 |
