@@ -78,6 +78,7 @@ struct UISnapshot {
     #define NUM_SCAN_POINTS 4
     uint8_t       diag_laser_states;      // 激光当前状态位掩码
     uint8_t       diag_laser_history[NUM_SCAN_POINTS][25]; // 激光历史数据 (200 bits = 25 bytes)
+    int32_t       diag_sample_count;      // 编码器当前采样点数 (时刻/游标 X轴坐标)
     
     // --- 下料口配置 (8个出口) ---
     struct OutletConfig {

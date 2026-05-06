@@ -143,16 +143,30 @@ void CommRS485::handleDiagLaser(JsonObject data) {
     
     // 1. 解析当前状态位掩码
     _ctx->ui.diag_laser_states = data["states"] | 0;
+    _ctx->ui.diag_sample_count = data["sample_count"] | 0;
 
-    // 2. 解析历史数据
+    Serial.printf("[Slave RS485] << Received diag_laser: states=0x%02X, sample_count=%d\n", 
+                  _ctx->ui.diag_laser_states, _ctx->ui.diag_sample_count);
+
+    // 2. 解析历史数据 (支持动态长度)
     const char* keys[] = {"history_p1", "history_p2", "history_p3", "history_p4"};
     for (int i = 0; i < NUM_SCAN_POINTS; i++) {
         const char* hex = data[keys[i]] | "";
-        if (strlen(hex) == 50) { // 25 bytes * 2 chars/byte = 50 chars
-            for (int j = 0; j < 25; j++) {
-                char tmp[3] = { hex[j * 2], hex[j * 2 + 1], 0 };
-                _ctx->ui.diag_laser_history[i][j] = (uint8_t)strtol(tmp, NULL, 16);
-            }
+        int len = strlen(hex);
+        int numBytes = len / 2;
+        if (numBytes > 25) numBytes = 25;
+
+        // 清空旧缓冲区，防止上一个周期的残留
+        memset(_ctx->ui.diag_laser_history[i], 0, 25);
+
+        for (int j = 0; j < numBytes; j++) {
+            char tmp[3] = { hex[j * 2], hex[j * 2 + 1], 0 };
+            _ctx->ui.diag_laser_history[i][j] = (uint8_t)strtol(tmp, NULL, 16);
+        }
+        
+        if (i == 0 && numBytes > 0) {
+            Serial.printf("[Slave RS485] P1 history[0]=0x%02X (numBytes=%d, hex_len=%d)\n", 
+                          _ctx->ui.diag_laser_history[0][0], numBytes, len);
         }
     }
 

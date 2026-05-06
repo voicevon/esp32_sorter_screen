@@ -7,6 +7,10 @@
 #include "system/SystemContext.h"
 #include "drivers/PinDefinition.h"
 #include "ui/I_Command_Bus.h"
+#include "ui/diag/DiagEncoderView.h"
+#include "ui/diag/DiagScannerView.h"
+#include "ui/diag/DiagOutletView.h"
+#include "ui/diag/DiagCommView.h"
 
 // Font declarations
 LV_FONT_DECLARE(ui_font_chs_16);
@@ -53,29 +57,10 @@ private:
     lv_obj_t* diag_tv = nullptr;       
     
     // --- Diagnostic Sub-pages UI Cache ---
-    // 1. Encoder Diag
-    struct {
-        lv_obj_t* label_raw;
-        lv_obj_t* label_corrected;
-        lv_obj_t* label_logic;
-        lv_obj_t* label_zero;
-        lv_obj_t* label_status;
-        lv_obj_t* label_offset;
-    } diag_encoder_ui;
-
-    // 2. Laser Diag
-    struct {
-        lv_obj_t* leds[4];
-        lv_obj_t* chart; // Using chart for history
-        lv_chart_series_t* series[4];
-    } diag_laser_ui;
-
-    // 3. Outlet Diag
-    lv_obj_t* diag_outlet_leds[8];
-
-    // 4. Communication Log Diag
-    lv_obj_t* diag_comm_hex_label;
-    lv_obj_t* diag_comm_ascii_label;
+    DiagEncoderView* _diagEncoderView = nullptr;
+    DiagScannerView* _diagScannerView = nullptr;
+    DiagOutletView*  _diagOutletView = nullptr;
+    DiagCommView*    _diagCommView = nullptr;
 
     // Outlet Config UI Cache
     struct OutletUI {

@@ -10,6 +10,10 @@ UIManager::UIManager() {
     about_tab = nullptr;
     status_label = nullptr;
     _bus = nullptr;
+    _diagEncoderView = new DiagEncoderView();
+    _diagScannerView = new DiagScannerView();
+    _diagOutletView = new DiagOutletView();
+    _diagCommView = new DiagCommView();
 }
 
 
@@ -93,77 +97,21 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
         lv_obj_set_style_bg_color(comm_led, isOk ? lv_color_hex(0x22C55E) : lv_color_hex(0xEF4444), 0);
     }
     
-    // 4. Comm Log Monitor (Dual Columns)
-    if (diag_comm_hex_label && diag_comm_ascii_label && ctx->ui.curMode == MODE_DIAGNOSTICS) {
-        String fullHex = "";
-        String fullAscii = "";
-        
-        if (ctx->ui.diag_comm_log_count == 0) {
-            fullHex = "Listen...";
-            fullAscii = "Wait Data...";
-        } else {
-            for (int i = 0; i < ctx->ui.diag_comm_log_count; i++) {
-                fullHex += String(ctx->ui.diag_comm_log_hex[i]) + "\n";
-                fullAscii += String(ctx->ui.diag_comm_log_ascii[i]) + "\n";
-            }
+    // 4. Diag Sub-pages modular routing
+    if (ctx->ui.curMode == MODE_DIAGNOSTICS) {
+        if (_diagCommView) {
+            _diagCommView->update(ctx);
         }
-        lv_label_set_text(diag_comm_hex_label, fullHex.c_str());
-        lv_label_set_text(diag_comm_ascii_label, fullAscii.c_str());
-    }
-    
-    // 5. Diag Encoder Data
-    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 0) {
-        if (diag_encoder_ui.label_raw) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_raw, "原始值 (Raw): %d", ctx->ui.diag_encoder_raw);
-        }
-        if (diag_encoder_ui.label_corrected) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_corrected, "修正值 (Corrected): %d", ctx->ui.diag_encoder_corrected);
-        }
-        if (diag_encoder_ui.label_logic) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_logic, "逻辑值 (Logic): %d", ctx->ui.diag_encoder_logic);
-        }
-        if (diag_encoder_ui.label_zero) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_zero, "经历 Z 信号次数: %d", ctx->ui.diag_encoder_zero_count);
-        }
-        if (diag_encoder_ui.label_status) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_status, "Zero 统计 (正确/总计): %d / %d", 
-                                  ctx->ui.diag_encoder_zero_correct, ctx->ui.diag_encoder_zero_total);
-        }
-        if (diag_encoder_ui.label_offset) {
-            lv_label_set_text_fmt(diag_encoder_ui.label_offset, "%d", ctx->ui.diag_encoder_offset);
+        if (ctx->ui.diag_page_id == 0 && _diagEncoderView) {
+            _diagEncoderView->update(ctx);
+        } else if (ctx->ui.diag_page_id == 1 && _diagScannerView) {
+            _diagScannerView->update(ctx);
+        } else if (ctx->ui.diag_page_id == 2 && _diagOutletView) {
+            _diagOutletView->update(ctx);
         }
     }
 
-    // 6. Diag Laser Data
-    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 1) {
-        for (int i = 0; i < NUM_SCAN_POINTS; i++) {
-            if (diag_laser_ui.leds[i]) {
-                bool isOn = (ctx->ui.diag_laser_states >> i) & 0x01;
-                if (isOn) {
-                    lv_led_set_color(diag_laser_ui.leds[i], lv_color_hex(0xF43F5E)); // 红: 遮挡
-                } else {
-                    lv_led_set_color(diag_laser_ui.leds[i], lv_color_hex(0x10B981)); // 绿: 畅通
-                }
-                lv_led_on(diag_laser_ui.leds[i]);
-            }
-        }
-
-        if (diag_laser_ui.chart) {
-            for (int i = 0; i < NUM_SCAN_POINTS; i++) {
-                if (diag_laser_ui.series[i]) {
-                    for (int j = 0; j < 200; j++) {
-                        int byteIdx = j / 8;
-                        int bitIdx = 7 - (j % 8); 
-                        bool val = (ctx->ui.diag_laser_history[i][byteIdx] >> bitIdx) & 0x01;
-                        lv_chart_set_value_by_id(diag_laser_ui.chart, diag_laser_ui.series[i], j, i + (val ? 0.8 : 0));
-                    }
-                }
-            }
-            lv_chart_refresh(diag_laser_ui.chart);
-        }
-    }
-
-    // 7. Outlet Config (Standalone Config Mode)
+    // 5. Outlet Config (Standalone Config Mode)
     if (ctx->ui.curMode == MODE_OUTLET_CONFIG) {
         for (int i = 0; i < 8; i++) {
             if (config_outlet_ui[i].label_min) {
@@ -185,20 +133,6 @@ void UIManager::updateDashboard(const SystemContext* ctx) {
             update_cb(config_outlet_ui[i].cb_s, (ctx->ui.outlets[i].lengthMask & 0x01));
             update_cb(config_outlet_ui[i].cb_m, (ctx->ui.outlets[i].lengthMask & 0x02));
             update_cb(config_outlet_ui[i].cb_l, (ctx->ui.outlets[i].lengthMask & 0x04));
-        }
-    }
-
-    // 8. Diag Outlet Data
-    if (ctx->ui.curMode == MODE_DIAGNOSTICS && ctx->ui.diag_page_id == 2) {
-        for (int i = 0; i < 8; i++) {
-            if (diag_outlet_leds[i]) {
-                if (ctx->ui.outlets[i].state) {
-                    lv_led_on(diag_outlet_leds[i]);
-                    lv_led_set_color(diag_outlet_leds[i], lv_color_hex(0x38BDF8)); 
-                } else {
-                    lv_led_off(diag_outlet_leds[i]);
-                }
-            }
         }
     }
 
